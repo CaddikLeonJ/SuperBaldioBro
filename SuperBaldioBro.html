@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>Fat Nap: Super Baldio Bro — v0.1.2 Tap to Start Audio Test</title>
+<title>Fat Nap: Super Baldio Bro — v0.2 Sprite Test</title>
 <style>
 html,body{
 margin:0;
@@ -90,6 +90,39 @@ knobX: 0, knobY: 0, knobR: 25,
 jumpX: 0, jumpY: 0, jumpR: 48,
 runX: 0, runY: 0, runR: 42
 };
+
+// v0.2 official Fat Nap movement sprite atlas.
+const atlas = new Image();
+let atlasReady = false;
+let atlasError = false;
+const ATLAS_COMMIT = "1dcf975ba9390929b67797847aed57a29c8764e5";
+const ATLAS_BASE = "https://raw.githubusercontent.com/CaddikLeonJ/SuperBaldioBro/"+ATLAS_COMMIT+"/assets/atlas_part";
+const frames = {
+idle:{sx:0,sy:0,ox:37,oy:5,w:42,h:100},
+walk1:{sx:117,sy:0,ox:21,oy:5,w:74,h:100},
+walk2:{sx:234,sy:0,ox:42,oy:5,w:33,h:100},
+walk3:{sx:351,sy:0,ox:21,oy:5,w:74,h:100},
+walk4:{sx:0,sy:110,ox:42,oy:5,w:33,h:100},
+run1:{sx:117,sy:110,ox:13,oy:5,w:90,h:100},
+run2:{sx:234,sy:110,ox:25,oy:5,w:66,h:100},
+run3:{sx:351,sy:110,ox:10,oy:5,w:97,h:100},
+run4:{sx:0,sy:220,ox:25,oy:5,w:67,h:100},
+jump:{sx:117,sy:220,ox:5,oy:5,w:107,h:100},
+crouch:{sx:234,sy:220,ox:24,oy:5,w:68,h:100}
+};
+async function loadAtlas(){
+try{
+const parts=await Promise.all([1,2,3,4].map(async n=>{
+const r=await fetch(ATLAS_BASE+n+".txt",{cache:"no-store"});
+if(!r.ok) throw new Error("atlas "+n);
+return (await r.text()).trim();
+}));
+atlas.onload=()=>{atlasReady=true; atlasError=false;};
+atlas.onerror=()=>{atlasError=true;};
+atlas.src="data:image/webp;base64,"+parts.join("");
+}catch(e){atlasError=true;}
+}
+loadAtlas();
 function clamp(v,min,max){ return Math.max(min,Math.min(max,v)); }
 function lerp(a,b,t){ return a+(b-a)*t; }
 const audio = {
@@ -283,17 +316,17 @@ ctx.fillRect(sx,0,panelW,state.stageH);
 ctx.fillStyle = "#2c3348";
 ctx.fillRect(sx+panelW-3,0,3,state.stageH);
 }
-drawWorldRect(100, floorY-180, 240, 120, "#30384c");
-drawWorldRect(390, floorY-200, 320, 22, "#343b4f");
+drawWorldRect(100, floorY-180, 240, 120, "#30384c"); // bed
+drawWorldRect(390, floorY-200, 320, 22, "#343b4f"); // desk top
 drawWorldRect(420, floorY-178, 18, 178, "#2a3042");
 drawWorldRect(665, floorY-178, 18, 178, "#2a3042");
-drawWorldRect(455, floorY-310, 95, 72, "#0c0f17");
+drawWorldRect(455, floorY-310, 95, 72, "#0c0f17"); // monitor
 drawWorldRect(465, floorY-300, 75, 52, "#5162d8");
 drawWorldRect(565, floorY-310, 95, 72, "#0c0f17");
 drawWorldRect(575, floorY-300, 75, 52, "#5a607b");
-drawWorldRect(870, floorY-145, 75, 145, "#302938");
-drawWorldRect(1020, floorY-250, 110, 250, "#403043");
-drawWorldRect(1370, floorY-205, 150, 205, "#2d3446");
+drawWorldRect(870, floorY-145, 75, 145, "#302938"); // shelf
+drawWorldRect(1020, floorY-250, 110, 250, "#403043"); // wardrobe
+drawWorldRect(1370, floorY-205, 150, 205, "#2d3446"); // cabinet
 ctx.fillStyle = "#33394b";
 ctx.fillRect(0,floorY,state.w,state.stageH-floorY);
 ctx.fillStyle = "#555e75";
@@ -305,46 +338,28 @@ if(sx+w < 0 || sx > state.w) return;
 ctx.fillStyle = color;
 ctx.fillRect(sx,wy,w,h);
 }
+function currentFrame(){
+if(!player.grounded) return frames.jump;
+if(player.crouching) return frames.crouch;
+const speed=Math.abs(player.vx);
+if(player.running && speed>40) return frames["run"+(Math.floor(state.time*10)%4+1)];
+if(speed>15) return frames["walk"+(Math.floor(state.time*7)%4+1)];
+return frames.idle;
+}
 function drawPlayer(){
-const x = Math.round(player.x - state.cameraX);
-const y = Math.round(player.y);
+if(!atlasReady) return;
+const f=currentFrame();
+const feetX=Math.round(player.x-state.cameraX+player.w/2);
+const feetY=Math.round(player.y+player.h+1);
+let displayH=150;
+if(f===frames.crouch) displayH=116;
+if(f===frames.jump) displayH=140;
+const displayW=f.w*(displayH/f.h);
 ctx.save();
-ctx.translate(x+player.w/2,y+player.h/2);
-if(player.dir < 0) ctx.scale(-1,1);
-const h = player.h;
-const bodyTop = -h/2;
-const bodyBottom = h/2;
-ctx.strokeStyle = "#d9dce6";
-ctx.lineWidth = Math.max(4,player.w*0.15);
-ctx.lineCap = "round";
-ctx.beginPath();
-ctx.moveTo(-5, bodyBottom-16);
-ctx.lineTo(-8, bodyBottom-2);
-ctx.moveTo(5, bodyBottom-16);
-ctx.lineTo(9, bodyBottom-2);
-ctx.stroke();
-ctx.fillStyle = "#eceef2";
-roundRect(-player.w*0.32, bodyTop+16, player.w*0.64, h*0.48, 8);
-ctx.fill();
-ctx.fillStyle = "#6e624e";
-roundRect(-player.w*0.31, bodyTop+h*0.48, player.w*0.62, h*0.34, 7);
-ctx.fill();
-ctx.fillStyle = "#e4b39f";
-ctx.beginPath();
-ctx.arc(0, bodyTop+11, 10, 0, Math.PI*2);
-ctx.fill();
-ctx.strokeStyle = "#171717";
-ctx.lineWidth = 2;
-ctx.beginPath();
-ctx.arc(-4,bodyTop+10,4,0,Math.PI*2);
-ctx.arc(4,bodyTop+10,4,0,Math.PI*2);
-ctx.moveTo(0,bodyTop+10);
-ctx.lineTo(1,bodyTop+10);
-ctx.stroke();
-ctx.fillStyle = "#ffcc66";
-ctx.beginPath();
-ctx.arc(7,bodyTop+12,2,0,Math.PI*2);
-ctx.fill();
+ctx.translate(feetX,feetY);
+if(player.dir<0) ctx.scale(-1,1);
+ctx.imageSmoothingEnabled=true;
+ctx.drawImage(atlas,f.sx+f.ox,f.sy+f.oy,f.w,f.h,-displayW/2,-displayH,displayW,displayH);
 ctx.restore();
 }
 function drawHUD(){
@@ -353,11 +368,11 @@ ctx.fillRect(0,0,state.w,32);
 ctx.fillStyle = "#ffffff";
 ctx.font = "700 13px Arial";
 ctx.textAlign = "left";
-ctx.fillText("FAT NAP: SUPER BALDIO BRO — v0.1.2 TAP TO START",10,20);
+ctx.fillText("FAT NAP: SUPER BALDIO BRO — v0.2 SPRITE TEST",10,20);
 ctx.fillStyle = "#b9bfd2";
 ctx.font = "11px Arial";
 ctx.textAlign = "right";
-ctx.fillText(player.running ? "RUN" : (player.crouching ? "CROUCH" : "WALK"),state.w-10,20);
+ctx.fillText(!player.grounded ? "JUMP" : (player.crouching ? "CROUCH" : (player.running ? "RUN" : (Math.abs(player.vx)>15 ? "WALK" : "IDLE"))),state.w-10,20);
 }
 function drawControls(){
 const controlsH = state.h-state.controlsY;
@@ -418,7 +433,7 @@ ctx.font = "700 18px Arial";
 ctx.fillText("Tap anywhere to start", state.w/2, state.h*0.49);
 ctx.fillStyle = "#8f98ae";
 ctx.font = "13px Arial";
-ctx.fillText("Music and sound will start with your tap", state.w/2, state.h*0.54);
+ctx.fillText("Official Fat Nap movement sprites — tap to start", state.w/2, state.h*0.54);
 const pulse = 0.65 + Math.sin(state.time*4)*0.18;
 ctx.globalAlpha = pulse;
 ctx.strokeStyle = "#ffffff";
@@ -429,6 +444,21 @@ ctx.stroke();
 ctx.globalAlpha = 1;
 ctx.textAlign = "left";
 ctx.textBaseline = "alphabetic";
+}
+function drawLoadingOverlay(){
+if(atlasReady) return;
+ctx.fillStyle="rgba(3,4,8,.94)";
+ctx.fillRect(0,0,state.w,state.h);
+ctx.textAlign="center";
+ctx.textBaseline="middle";
+ctx.fillStyle="#fff";
+ctx.font="700 20px Arial";
+ctx.fillText(atlasError ? "Sprite download failed" : "Loading Fat Nap...",state.w/2,state.h*0.47);
+ctx.fillStyle="#9fa6ba";
+ctx.font="13px Arial";
+ctx.fillText(atlasError ? "Close and reopen the game to retry." : "Getting the latest official sprite sheet",state.w/2,state.h*0.52);
+ctx.textAlign="left";
+ctx.textBaseline="alphabetic";
 }
 function drawOrientationWarning(){
 if(state.w <= state.h) return;
@@ -451,6 +481,7 @@ drawPlayer();
 drawHUD();
 drawControls();
 drawStartOverlay();
+drawLoadingOverlay();
 drawOrientationWarning();
 }
 function frame(now){
@@ -492,6 +523,7 @@ input.moveY = clamp(dy/max,-1,1);
 canvas.addEventListener("pointerdown",e=>{
 e.preventDefault();
 if(!state.started){
+if(!atlasReady) return;
 startGame();
 return;
 }
@@ -539,7 +571,7 @@ canvas.addEventListener("pointerup",releasePointer,{passive:false});
 canvas.addEventListener("pointercancel",releasePointer,{passive:false});
 canvas.addEventListener("contextmenu",e=>e.preventDefault());
 window.addEventListener("keydown",e=>{
-if(!state.started) startGame();
+if(!state.started && atlasReady) startGame();
 ensureAudio();
 input.keys.add(e.code);
 if(e.code==="Space" || e.code==="ArrowUp" || e.code==="KeyW"){
