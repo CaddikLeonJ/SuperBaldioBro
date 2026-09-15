@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>Fat Nap: Super Baldio Bro — v0.2 Sprite Test</title>
+<title>Fat Nap: Super Baldio Bro — v0.2.2 Sprite Loading Fix</title>
 <style>
 html,body{
 margin:0;
@@ -91,12 +91,13 @@ jumpX: 0, jumpY: 0, jumpR: 48,
 runX: 0, runY: 0, runR: 42
 };
 
-// v0.2 official Fat Nap movement sprite atlas.
-const atlas = new Image();
+// v0.2.2 official Fat Nap movement sprite atlas — split into 3 image rows for iPhone WebView reliability.
+const atlasRows = [new Image(),new Image(),new Image()];
 let atlasReady = false;
 let atlasError = false;
-const ATLAS_COMMIT = "1dcf975ba9390929b67797847aed57a29c8764e5";
-const ATLAS_BASE = "https://raw.githubusercontent.com/CaddikLeonJ/SuperBaldioBro/"+ATLAS_COMMIT+"/assets/atlas_part";
+let atlasLoaded = 0;
+const ATLAS_COMMIT = "c09fa00acd7f205ef5acc4abd48ee472a1a22738";
+const ATLAS_BASE = "https://cdn.jsdelivr.net/gh/CaddikLeonJ/SuperBaldioBro@"+ATLAS_COMMIT+"/assets/atlas_row";
 const frames = {
 idle:{sx:0,sy:0,ox:37,oy:5,w:42,h:100},
 walk1:{sx:117,sy:0,ox:21,oy:5,w:74,h:100},
@@ -110,19 +111,11 @@ run4:{sx:0,sy:220,ox:25,oy:5,w:67,h:100},
 jump:{sx:117,sy:220,ox:5,oy:5,w:107,h:100},
 crouch:{sx:234,sy:220,ox:24,oy:5,w:68,h:100}
 };
-async function loadAtlas(){
-try{
-const parts=await Promise.all([1,2,3,4].map(async n=>{
-const r=await fetch(ATLAS_BASE+n+".txt",{cache:"no-store"});
-if(!r.ok) throw new Error("atlas "+n);
-return (await r.text()).trim();
-}));
-atlas.onload=()=>{atlasReady=true; atlasError=false;};
-atlas.onerror=()=>{atlasError=true;};
-atlas.src="data:image/webp;base64,"+parts.join("");
-}catch(e){atlasError=true;}
-}
-loadAtlas();
+atlasRows.forEach((img,i)=>{
+  img.onload=()=>{ atlasLoaded++; if(atlasLoaded===atlasRows.length){atlasReady=true; atlasError=false;} };
+  img.onerror=()=>{atlasError=true;};
+  img.src=ATLAS_BASE+(i+1)+".svg";
+});
 function clamp(v,min,max){ return Math.max(min,Math.min(max,v)); }
 function lerp(a,b,t){ return a+(b-a)*t; }
 const audio = {
@@ -359,7 +352,8 @@ ctx.save();
 ctx.translate(feetX,feetY);
 if(player.dir<0) ctx.scale(-1,1);
 ctx.imageSmoothingEnabled=true;
-ctx.drawImage(atlas,f.sx+f.ox,f.sy+f.oy,f.w,f.h,-displayW/2,-displayH,displayW,displayH);
+const row=atlasRows[Math.floor(f.sy/110)];
+ctx.drawImage(row,f.sx+f.ox,f.oy,f.w,f.h,-displayW/2,-displayH,displayW,displayH);
 ctx.restore();
 }
 function drawHUD(){
@@ -368,7 +362,7 @@ ctx.fillRect(0,0,state.w,32);
 ctx.fillStyle = "#ffffff";
 ctx.font = "700 13px Arial";
 ctx.textAlign = "left";
-ctx.fillText("FAT NAP: SUPER BALDIO BRO — v0.2 SPRITE TEST",10,20);
+ctx.fillText("FAT NAP: SUPER BALDIO BRO — v0.2.2 SPRITE FIX",10,20);
 ctx.fillStyle = "#b9bfd2";
 ctx.font = "11px Arial";
 ctx.textAlign = "right";
@@ -453,10 +447,10 @@ ctx.textAlign="center";
 ctx.textBaseline="middle";
 ctx.fillStyle="#fff";
 ctx.font="700 20px Arial";
-ctx.fillText(atlasError ? "Sprite download failed" : "Loading Fat Nap...",state.w/2,state.h*0.47);
+ctx.fillText(atlasError ? "Sprite load failed" : "Loading Fat Nap...",state.w/2,state.h*0.47);
 ctx.fillStyle="#9fa6ba";
 ctx.font="13px Arial";
-ctx.fillText(atlasError ? "Close and reopen the game to retry." : "Getting the latest official sprite sheet",state.w/2,state.h*0.52);
+ctx.fillText(atlasError ? "Reopen the game once — this build no longer uses blocked fetch requests." : "Getting the latest official sprite sheet",state.w/2,state.h*0.52);
 ctx.textAlign="left";
 ctx.textBaseline="alphabetic";
 }
