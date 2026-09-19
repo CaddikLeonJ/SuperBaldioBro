@@ -49,9 +49,25 @@ function loadFartBuffer(){
  fartBufferPromise=fetch(fartAudioURL).then(r=>{if(!r.ok)throw new Error('fart audio');return r.arrayBuffer()}).then(b=>A.ctx.decodeAudioData(b.slice(0))).then(b=>{fartBuffer=b;return b}).catch(()=>{fartBufferPromise=null;return null});
  return fartBufferPromise
 }
+function buildFartSustain(buf,ac,start,end){
+ const sr=buf.sampleRate,a=Math.max(0,Math.floor(start*sr)),b=Math.min(buf.length,Math.floor(end*sr)),span=Math.max(2,b-a);
+ const seconds=2.4,outLen=Math.max(2048,Math.floor(sr*seconds)),channels=buf.numberOfChannels,out=ac.createBuffer(channels,outLen,sr),weights=new Float32Array(outLen);
+ const grain=Math.min(Math.floor(sr*.14),Math.max(512,Math.floor(span*.52))),hop=Math.max(128,Math.floor(grain*.25));
+ const outs=[];for(let ch=0;ch<channels;ch++)outs.push(out.getChannelData(ch));
+ for(let pos=0;pos<outLen;pos+=hop){
+  const rate=.985+Math.random()*.03,need=Math.min(span,Math.max(2,Math.floor(grain*rate))),room=Math.max(0,span-need),off=a+Math.floor(Math.random()*(room+1));
+  for(let j=0;j<grain;j++){
+   const oi=(pos+j)%outLen,w=.5-.5*Math.cos(Math.PI*2*j/(grain-1)),si=Math.min(b-1,off+Math.floor(j*rate));
+   weights[oi]+=w;
+   for(let ch=0;ch<channels;ch++)outs[ch][oi]+=buf.getChannelData(ch)[si]*w
+  }
+ }
+ for(let i=0;i<outLen;i++){const w=Math.max(.0001,weights[i]);for(let ch=0;ch<channels;ch++)outs[ch][i]/=w}
+ return out
+}
 function stopRealFartAudio(){
  fartAudioSession++;
- if(fartGrainTimer){clearTimeout(fartGrainTimer);fartGrainTimer=0}
+ if(fartGrainTimer){clearInterval(fartGrainTimer);fartGrainTimer=0}
  const ac=A.ctx,g=fartRealGain;
  if(ac&&g){const t=ac.currentTime;try{g.gain.cancelScheduledValues(t);g.gain.setValueAtTime(g.gain.value,t);g.gain.linearRampToValueAtTime(0,t+.045)}catch(e){}}
  const nodes=fartAudioNodes.splice(0);
@@ -69,30 +85,12 @@ function playFartRelease(){
   const intro=ac.createBufferSource(),ig=ac.createGain();intro.buffer=buf;intro.connect(ig);ig.connect(master);
   ig.gain.setValueAtTime(1,now);ig.gain.setValueAtTime(1,now+Math.max(.20,d-.16));ig.gain.linearRampToValueAtTime(0,now+d+.02);
   intro.start(now,0);intro.stop(now+d+.03);fartAudioNodes.push(intro);intro.onended=()=>{const j=fartAudioNodes.indexOf(intro);if(j>=0)fartAudioNodes.splice(j,1)};
-  const grainLen=Math.min(.12,Math.max(.10,(tailEnd-tailStart)*.38)),hop=grainLen*.25,env=new Float32Array(96);
-  for(let i=0;i<env.length;i++)env[i]=.46*(.5-.5*Math.cos(Math.PI*2*i/(env.length-1)));
-  let cursor=tailStart,cursorDir=1;
-  fartNextGrain=now+sustainAt;
-  const pump=()=>{
-   if(!F.active||session!==fartAudioSession)return;
-   const ahead=ac.currentTime+.32;
-   while(fartNextGrain<ahead){
-    const src=ac.createBufferSource(),gg=ac.createGain();
-    src.buffer=buf;
-    const rateA=.95+Math.random()*.10,rateB=.94+Math.random()*.12;
-    const available=Math.max(.08,tailEnd-tailStart),sourceDur=Math.min(available,grainLen*1.04),room=Math.max(0,available-sourceDur);
-    const offset=Math.max(tailStart,Math.min(tailStart+room,cursor)),t=fartNextGrain,outDur=grainLen;
-    src.playbackRate.setValueAtTime(rateA,t);src.playbackRate.linearRampToValueAtTime(rateB,t+outDur);
-    gg.gain.setValueCurveAtTime(env,t,outDur);
-    src.connect(gg);gg.connect(master);src.start(t,offset,sourceDur);src.stop(t+outDur+.02);fartAudioNodes.push(src);
-    src.onended=()=>{const j=fartAudioNodes.indexOf(src);if(j>=0)fartAudioNodes.splice(j,1)};
-    cursor+=cursorDir*(.010+Math.random()*.008);
-    if(cursor>=tailStart+room){cursor=tailStart+room;cursorDir=-1}else if(cursor<=tailStart){cursor=tailStart;cursorDir=1}
-    fartNextGrain+=hop
-   }
-   fartGrainTimer=setTimeout(pump,70)
-  };
-  pump()
+  const sustain=buildFartSustain(buf,ac,tailStart,tailEnd),src=ac.createBufferSource(),sg=ac.createGain();
+  src.buffer=sustain;src.loop=true;src.playbackRate.value=1;src.connect(sg);sg.connect(master);
+  const st=now+sustainAt,handoff=now+Math.max(.42,d-.20);
+  sg.gain.setValueAtTime(0,st);sg.gain.linearRampToValueAtTime(.28,st+.18);sg.gain.setValueAtTime(.28,handoff);sg.gain.linearRampToValueAtTime(.62,now+d+.04);
+  src.start(st);fartAudioNodes.push(src);
+  fartGrainTimer=setInterval(()=>{if(!F.active||session!==fartAudioSession)return;const t=ac.currentTime;src.playbackRate.setTargetAtTime(.965+Math.random()*.07,t,.42)},520)
  })
 }
 function stopFart(){F.active=false;F.t=0;F.emit=0;F.clipPlayed=false;stopRealFartAudio();stopVoice()}
