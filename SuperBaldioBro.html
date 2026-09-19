@@ -91,7 +91,7 @@ function playFartRelease(){
   const st=now+sustainAt,handoff=now+Math.max(.42,d-.20);
   sg.gain.setValueAtTime(0,st);sg.gain.linearRampToValueAtTime(.28,st+.18);sg.gain.setValueAtTime(.28,handoff);sg.gain.linearRampToValueAtTime(.62,now+d+.04);
   src.start(st);fartAudioNodes.push(src);
-  fartGrainTimer=setInterval(()=>{if(!F.active||session!==fartAudioSession)return;const t=ac.currentTime;src.playbackRate.setTargetAtTime(.99+Math.random()*.02,t,.9)},1200)
+  const pitchDrift=()=>{if(!F.active||session!==fartAudioSession)return;const t=ac.currentTime,target=.88+Math.random()*.26,smooth=.22+Math.random()*.24;src.playbackRate.setTargetAtTime(target,t,smooth);fartGrainTimer=setTimeout(pitchDrift,450+Math.random()*850)};fartGrainTimer=setTimeout(pitchDrift,500+Math.random()*700)
  })
 }
 function stopFart(){F.active=false;F.t=0;F.emit=0;F.clipPlayed=false;stopRealFartAudio();stopVoice()}
