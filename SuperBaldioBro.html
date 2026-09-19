@@ -39,8 +39,8 @@ function startVoice(){
  const sources=[osc,flutter,src];sources.forEach(s=>s.start());F.voice={out,osc,flutter,filter,src,sources,nodes:[out,dry,wet,filter,bass,con,osc,body,flutter,mod,src,ng],next:0};
 }
 function varyVoice(){const v=F.voice;if(!v||F.t<v.next)return;v.next=F.t+.09+Math.random()*.14;const t=A.ctx.currentTime;v.osc.frequency.setTargetAtTime(38+Math.random()*42,t,.045);v.flutter.frequency.setTargetAtTime(17+Math.random()*22,t,.035);v.filter.frequency.setTargetAtTime(360+Math.random()*480,t,.05);v.src.playbackRate.setTargetAtTime(.7+Math.random()*.48,t,.055)}
-const fartReleaseClips=['Fat Nap Fart 1.mp3'];function playFartRelease(){const clip=fartReleaseClips[Math.floor(Math.random()*fartReleaseClips.length)];const a=new Audio(encodeURI(clip));a.volume=1;a.play().catch(()=>{})}function stopFart(){const wasActive=F.active,lastFrame=F.t>=.44;F.active=false;F.t=0;F.emit=0;stopVoice();if(wasActive&&lastFrame)playFartRelease()}
-function beginMove(id){if(menuOpen||!S.start)return;audio();if(id==='fart'){if(!fartReady()){say('Fart sprites are loading…');return}if(headActive||!P.ground||P.crouch||F.active)return;F.active=true;F.t=0;F.emit=0;F.dir=P.dir;P.vx=0}else if(id==='headbutt'&&!F.active){if(!headOK){say('Headbutt sprites are loading…');return}startHead()}}
+const fartReleaseClips=['Fat Nap Fart 1.mp3'];function playFartRelease(){const clip=fartReleaseClips[Math.floor(Math.random()*fartReleaseClips.length)];const a=new Audio(encodeURI(clip));a.volume=1;a.play().catch(()=>{})}function stopFart(){F.active=false;F.t=0;F.emit=0;F.clipPlayed=false;stopVoice()}
+function beginMove(id){if(menuOpen||!S.start)return;audio();if(id==='fart'){if(!fartReady()){say('Fart sprites are loading…');return}if(headActive||!P.ground||P.crouch||F.active)return;F.active=true;F.t=0;F.emit=0;F.clipPlayed=false;F.dir=P.dir;P.vx=0}else if(id==='headbutt'&&!F.active){if(!headOK){say('Headbutt sprites are loading…');return}startHead()}}
 function pressSlot(i,token){if(held.has(token)||!slots[i])return;held.set(token,slots[i]);beginMove(slots[i])}
 function releaseToken(token){const id=held.get(token);held.delete(token);if(id==='fart'&&![...held.values()].includes('fart'))stopFart()}
 function releaseAll(){held.clear();keys.clear();I.mx=I.my=0;I.jump=false;I.jumpDown=false;I.headDown=false;I.pp=I.jp=I.ap=null;headActive=false;headT=0;P.vx=0;stopFart()}
@@ -50,7 +50,7 @@ function fartFrame(){const im=fartImgs[fartIndex()],h=96,w=im.width*h/im.height;
 function circleHits(p,e){const y=fy()-e.h;const dx=p.x-cl(p.x,e.x,e.x+e.w),dy=p.y-cl(p.y,y,y+e.h);return dx*dx+dy*dy<=p.r*p.r}
 function hurt(e,damage){if(e.hp<=0)return;e.hp=Math.max(0,e.hp-damage);e.flash=.08}
 function updateAttacks(dt){
- if(F.active){F.t+=dt;if(F.t>=.28){startVoice();varyVoice();F.emit-=dt;while(F.emit<=0){F.emit+=.045;const o=fartOrigin();gas.push({x:o.x,y:o.y,vx:F.dir*(80+Math.random()*35),vy:-4-Math.random()*9,r:7,age:0,life:1.1+Math.random()*.3,seed:Math.random()*6.28});if(gas.length>100)gas.shift()}}}
+ if(F.active){F.t+=dt;if(F.t>=.44&&!F.clipPlayed){F.clipPlayed=true;playFartRelease()}if(F.t>=.28){startVoice();varyVoice();F.emit-=dt;while(F.emit<=0){F.emit+=.045;const o=fartOrigin();gas.push({x:o.x,y:o.y,vx:F.dir*(80+Math.random()*35),vy:-4-Math.random()*9,r:7,age:0,life:1.1+Math.random()*.3,seed:Math.random()*6.28});if(gas.length>100)gas.shift()}}}
  for(let i=gas.length-1;i>=0;i--){const p=gas[i];p.age+=dt;if(p.age>=p.life){gas.splice(i,1);continue}p.x+=p.vx*dt;p.y+=p.vy*dt;p.r=7+p.age*16;}
  for(const e of targets){e.flash=Math.max(0,e.flash-dt);if(e.hp>0&&gas.some(p=>circleHits(p,e)))hurt(e,30*dt)}
 }
