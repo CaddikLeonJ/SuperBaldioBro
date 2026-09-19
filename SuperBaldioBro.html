@@ -69,20 +69,25 @@ function playFartRelease(){
   const intro=ac.createBufferSource(),ig=ac.createGain();intro.buffer=buf;intro.connect(ig);ig.connect(master);
   ig.gain.setValueAtTime(1,now);ig.gain.setValueAtTime(1,now+Math.max(.20,d-.16));ig.gain.linearRampToValueAtTime(0,now+d+.02);
   intro.start(now,0);intro.stop(now+d+.03);fartAudioNodes.push(intro);intro.onended=()=>{const j=fartAudioNodes.indexOf(intro);if(j>=0)fartAudioNodes.splice(j,1)};
-  const grainLen=Math.min(.20,Math.max(.14,(tailEnd-tailStart)*.82)),hop=grainLen*.34,env=new Float32Array(64);
-  for(let i=0;i<env.length;i++)env[i]=.55*(.5-.5*Math.cos(Math.PI*2*i/(env.length-1)));
+  const grainLen=Math.min(.12,Math.max(.10,(tailEnd-tailStart)*.38)),hop=grainLen*.25,env=new Float32Array(96);
+  for(let i=0;i<env.length;i++)env[i]=.46*(.5-.5*Math.cos(Math.PI*2*i/(env.length-1)));
+  let cursor=tailStart,cursorDir=1;
   fartNextGrain=now+sustainAt;
   const pump=()=>{
    if(!F.active||session!==fartAudioSession)return;
    const ahead=ac.currentTime+.32;
    while(fartNextGrain<ahead){
-    const src=ac.createBufferSource(),gg=ac.createGain(),rate=.90+Math.random()*.20;
-    src.buffer=buf;src.playbackRate.value=rate;
-    const available=Math.max(.08,tailEnd-tailStart),sourceDur=Math.min(available,grainLen*rate),room=Math.max(0,available-sourceDur);
-    const offset=tailStart+room*Math.random(),outDur=sourceDur/rate,t=fartNextGrain;
+    const src=ac.createBufferSource(),gg=ac.createGain();
+    src.buffer=buf;
+    const rateA=.95+Math.random()*.10,rateB=.94+Math.random()*.12;
+    const available=Math.max(.08,tailEnd-tailStart),sourceDur=Math.min(available,grainLen*1.04),room=Math.max(0,available-sourceDur);
+    const offset=Math.max(tailStart,Math.min(tailStart+room,cursor)),t=fartNextGrain,outDur=grainLen;
+    src.playbackRate.setValueAtTime(rateA,t);src.playbackRate.linearRampToValueAtTime(rateB,t+outDur);
     gg.gain.setValueCurveAtTime(env,t,outDur);
-    src.connect(gg);gg.connect(master);src.start(t,offset,sourceDur);src.stop(t+outDur+.01);fartAudioNodes.push(src);
+    src.connect(gg);gg.connect(master);src.start(t,offset,sourceDur);src.stop(t+outDur+.02);fartAudioNodes.push(src);
     src.onended=()=>{const j=fartAudioNodes.indexOf(src);if(j>=0)fartAudioNodes.splice(j,1)};
+    cursor+=cursorDir*(.010+Math.random()*.008);
+    if(cursor>=tailStart+room){cursor=tailStart+room;cursorDir=-1}else if(cursor<=tailStart){cursor=tailStart;cursorDir=1}
     fartNextGrain+=hop
    }
    fartGrainTimer=setTimeout(pump,70)
