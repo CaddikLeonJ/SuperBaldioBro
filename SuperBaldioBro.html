@@ -65,7 +65,7 @@ function playFartRelease(){
  loadFartBuffer().then(buf=>{
   if(!buf||!F.active||session!==fartAudioSession)return;
   const now=ac.currentTime+.015,master=ac.createGain();fartRealGain=master;master.gain.value=1;master.connect(ac.destination);
-  const d=buf.duration,tailStart=Math.max(.20,d-.28),tailEnd=Math.max(tailStart+.12,d-.025),sustainAt=Math.max(.20,d-.24);
+  const d=buf.duration,tailStart=0,tailEnd=Math.min(.50,d-.025),sustainAt=.20;
   const intro=ac.createBufferSource(),ig=ac.createGain();intro.buffer=buf;intro.connect(ig);ig.connect(master);
   ig.gain.setValueAtTime(1,now);ig.gain.setValueAtTime(1,now+Math.max(.20,d-.16));ig.gain.linearRampToValueAtTime(0,now+d+.02);
   intro.start(now,0);intro.stop(now+d+.03);fartAudioNodes.push(intro);intro.onended=()=>{const j=fartAudioNodes.indexOf(intro);if(j>=0)fartAudioNodes.splice(j,1)};
