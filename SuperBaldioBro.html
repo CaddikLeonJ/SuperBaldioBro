@@ -65,25 +65,26 @@ function playFartRelease(){
  loadFartBuffer().then(buf=>{
   if(!buf||!F.active||session!==fartAudioSession)return;
   const now=ac.currentTime+.015,master=ac.createGain();fartRealGain=master;master.gain.value=1;master.connect(ac.destination);
+  const d=buf.duration,tailStart=Math.max(.20,d-.28),tailEnd=Math.max(tailStart+.12,d-.025),sustainAt=Math.max(.20,d-.24);
   const intro=ac.createBufferSource(),ig=ac.createGain();intro.buffer=buf;intro.connect(ig);ig.connect(master);
-  ig.gain.setValueAtTime(1,now);ig.gain.setValueAtTime(1,now+.20);ig.gain.linearRampToValueAtTime(.72,now+.30);ig.gain.linearRampToValueAtTime(0,now+.48);
-  intro.start(now,0);intro.stop(now+.50);fartAudioNodes.push(intro);
-  const grainLen=Math.min(.14,Math.max(.09,buf.duration*.13)),hop=grainLen*.52,fade=grainLen-hop;
-  fartNextGrain=now+.18;
+  ig.gain.setValueAtTime(1,now);ig.gain.setValueAtTime(1,now+Math.max(.20,d-.16));ig.gain.linearRampToValueAtTime(0,now+d+.02);
+  intro.start(now,0);intro.stop(now+d+.03);fartAudioNodes.push(intro);intro.onended=()=>{const j=fartAudioNodes.indexOf(intro);if(j>=0)fartAudioNodes.splice(j,1)};
+  const grainLen=Math.min(.20,Math.max(.14,(tailEnd-tailStart)*.82)),hop=grainLen*.34,env=new Float32Array(64);
+  for(let i=0;i<env.length;i++)env[i]=.55*(.5-.5*Math.cos(Math.PI*2*i/(env.length-1)));
+  fartNextGrain=now+sustainAt;
   const pump=()=>{
    if(!F.active||session!==fartAudioSession)return;
    const ahead=ac.currentTime+.32;
    while(fartNextGrain<ahead){
-    const src=ac.createBufferSource(),gg=ac.createGain();
-    src.buffer=buf;src.playbackRate.value=.985+Math.random()*.03;
-    const maxStart=Math.max(0,buf.duration-grainLen-.01);
-    const offset=Math.max(0,Math.min(maxStart,.20-grainLen*.40+(Math.random()-.5)*.018));
-    const t=fartNextGrain;
-    gg.gain.setValueAtTime(0,t);gg.gain.linearRampToValueAtTime(.78,t+fade);gg.gain.setValueAtTime(.78,t+grainLen-fade);gg.gain.linearRampToValueAtTime(0,t+grainLen);
-    src.connect(gg);gg.connect(master);src.start(t,offset,grainLen);src.stop(t+grainLen+.01);fartAudioNodes.push(src);
+    const src=ac.createBufferSource(),gg=ac.createGain(),rate=.90+Math.random()*.20;
+    src.buffer=buf;src.playbackRate.value=rate;
+    const available=Math.max(.08,tailEnd-tailStart),sourceDur=Math.min(available,grainLen*rate),room=Math.max(0,available-sourceDur);
+    const offset=tailStart+room*Math.random(),outDur=sourceDur/rate,t=fartNextGrain;
+    gg.gain.setValueCurveAtTime(env,t,outDur);
+    src.connect(gg);gg.connect(master);src.start(t,offset,sourceDur);src.stop(t+outDur+.01);fartAudioNodes.push(src);
+    src.onended=()=>{const j=fartAudioNodes.indexOf(src);if(j>=0)fartAudioNodes.splice(j,1)};
     fartNextGrain+=hop
    }
-   fartAudioNodes=fartAudioNodes.filter(n=>{try{return n.context===ac}catch(e){return false}});
    fartGrainTimer=setTimeout(pump,70)
   };
   pump()
