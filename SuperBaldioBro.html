@@ -44,7 +44,7 @@ function pressSlot(i,token){if(held.has(token)||!slots[i])return;held.set(token,
 function releaseToken(token){const id=held.get(token);held.delete(token);if(id==='fart'&&![...held.values()].includes('fart'))stopFart()}
 function releaseAll(){held.clear();keys.clear();I.mx=I.my=0;I.jump=false;I.jumpDown=false;I.headDown=false;I.pp=I.jp=I.ap=null;headActive=false;headT=0;P.vx=0;stopFart()}
 function fartIndex(){return F.t<.14?0:F.t<.28?1:F.t<.44?2:3}
-function fartOrigin(){return {x:P.x+P.w/2-F.dir*25,y:P.y+P.h-48}}
+function fartOrigin(){return {x:P.x+P.w/2-F.dir*29,y:P.y+P.h-3}}
 function fartFrame(){const im=fartImgs[fartIndex()],h=96,w=im.width*h/im.height;x.save();x.translate(P.x-S.cam+P.w/2,P.y+P.h+11.5);if(F.dir<0)x.scale(-1,1);x.drawImage(im,-w/2,-h,w,h);x.restore()}
 function circleHits(p,e){const y=fy()-e.h;const dx=p.x-cl(p.x,e.x,e.x+e.w),dy=p.y-cl(p.y,y,y+e.h);return dx*dx+dy*dy<=p.r*p.r}
 function hurt(e,damage){if(e.hp<=0)return;e.hp=Math.max(0,e.hp-damage);e.flash=.08}
