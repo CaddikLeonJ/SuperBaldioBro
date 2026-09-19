@@ -51,11 +51,12 @@ function loadFartBuffer(){
 }
 function buildFartSustain(buf,ac,start,end){
  const sr=buf.sampleRate,a=Math.max(0,Math.floor(start*sr)),b=Math.min(buf.length,Math.floor(end*sr)),span=Math.max(2,b-a);
- const seconds=2.4,outLen=Math.max(2048,Math.floor(sr*seconds)),channels=buf.numberOfChannels,out=ac.createBuffer(channels,outLen,sr),weights=new Float32Array(outLen);
- const grain=Math.min(Math.floor(sr*.14),Math.max(512,Math.floor(span*.52))),hop=Math.max(128,Math.floor(grain*.25));
+ const seconds=6,outLen=Math.max(4096,Math.floor(sr*seconds)),channels=buf.numberOfChannels,out=ac.createBuffer(channels,outLen,sr),weights=new Float32Array(outLen);
+ const grain=Math.min(Math.floor(sr*.19),Math.max(768,Math.floor(span*.62))),hop=Math.max(96,Math.floor(grain*.12));
  const outs=[];for(let ch=0;ch<channels;ch++)outs.push(out.getChannelData(ch));
  for(let pos=0;pos<outLen;pos+=hop){
-  const rate=.985+Math.random()*.03,need=Math.min(span,Math.max(2,Math.floor(grain*rate))),room=Math.max(0,span-need),off=a+Math.floor(Math.random()*(room+1));
+  const rate=.997+Math.random()*.006,need=Math.min(span,Math.max(2,Math.floor(grain*rate))),room=Math.max(0,span-need);
+  const phase=pos/outLen*Math.PI*6,off=a+Math.floor(room*(.5+.5*Math.sin(phase)));
   for(let j=0;j<grain;j++){
    const oi=(pos+j)%outLen,w=.5-.5*Math.cos(Math.PI*2*j/(grain-1)),si=Math.min(b-1,off+Math.floor(j*rate));
    weights[oi]+=w;
@@ -90,7 +91,7 @@ function playFartRelease(){
   const st=now+sustainAt,handoff=now+Math.max(.42,d-.20);
   sg.gain.setValueAtTime(0,st);sg.gain.linearRampToValueAtTime(.28,st+.18);sg.gain.setValueAtTime(.28,handoff);sg.gain.linearRampToValueAtTime(.62,now+d+.04);
   src.start(st);fartAudioNodes.push(src);
-  fartGrainTimer=setInterval(()=>{if(!F.active||session!==fartAudioSession)return;const t=ac.currentTime;src.playbackRate.setTargetAtTime(.965+Math.random()*.07,t,.42)},520)
+  fartGrainTimer=setInterval(()=>{if(!F.active||session!==fartAudioSession)return;const t=ac.currentTime;src.playbackRate.setTargetAtTime(.99+Math.random()*.02,t,.9)},1200)
  })
 }
 function stopFart(){F.active=false;F.t=0;F.emit=0;F.clipPlayed=false;stopRealFartAudio();stopVoice()}
