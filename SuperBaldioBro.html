@@ -41,61 +41,131 @@ function startVoice(){
 function varyVoice(){const v=F.voice;if(!v||F.t<v.next)return;v.next=F.t+.13+Math.random()*.22;const t=A.ctx.currentTime;v.osc.frequency.setTargetAtTime(32+Math.random()*30,t,.075);v.flutter.frequency.setTargetAtTime(13+Math.random()*18,t,.06);v.filter.frequency.setTargetAtTime(280+Math.random()*330,t,.09);v.src.playbackRate.setTargetAtTime(.76+Math.random()*.3,t,.09)}
 const fartReleaseClips=['Fat Nap Fart 1.mp3'];
 const fartAudioURL='https://raw.githubusercontent.com/CaddikLeonJ/SuperBaldioBro/main/'+encodeURI(fartReleaseClips[0]);
-let fartBuffer=null,fartBufferPromise=null,fartGrainTimer=0,fartAudioNodes=[],fartRealGain=null,fartAudioSession=0,fartNextGrain=0;
+let fartBuffer=null,fartBufferPromise=null,fartSustainBuffer=null,fartSustainPromise=null,fartPitchTimer=0,fartAudioNodes=[],fartRealGain=null,fartAudioSession=0;
 
 function loadFartBuffer(){
  if(fartBuffer)return Promise.resolve(fartBuffer);
  if(fartBufferPromise)return fartBufferPromise;
- fartBufferPromise=fetch(fartAudioURL).then(r=>{if(!r.ok)throw new Error('fart audio');return r.arrayBuffer()}).then(b=>A.ctx.decodeAudioData(b.slice(0))).then(b=>{fartBuffer=b;return b}).catch(()=>{fartBufferPromise=null;return null});
+ fartBufferPromise=fetch(fartAudioURL)
+  .then(r=>{if(!r.ok)throw new Error('fart audio');return r.arrayBuffer()})
+  .then(b=>A.ctx.decodeAudioData(b.slice(0)))
+  .then(b=>{fartBuffer=b;return b})
+  .catch(()=>{fartBufferPromise=null;return null});
  return fartBufferPromise
 }
-function buildFartSustain(buf,ac,start,end){
- const sr=buf.sampleRate,a=Math.max(0,Math.floor(start*sr)),b=Math.min(buf.length,Math.floor(end*sr)),span=Math.max(2,b-a);
- const seconds=6,outLen=Math.max(4096,Math.floor(sr*seconds)),channels=buf.numberOfChannels,out=ac.createBuffer(channels,outLen,sr),weights=new Float32Array(outLen);
- const grain=Math.min(Math.floor(sr*.26),Math.max(1024,Math.floor(span*.78))),hop=Math.max(96,Math.floor(grain*.09));
- const outs=[];for(let ch=0;ch<channels;ch++)outs.push(out.getChannelData(ch));
- for(let pos=0;pos<outLen;pos+=hop){
-  const rate=.997+Math.random()*.006,need=Math.min(span,Math.max(2,Math.floor(grain*rate))),room=Math.max(0,span-need);
-  const phase=pos/outLen*Math.PI*2.4,off=a+Math.floor(room*(.5+.5*Math.sin(phase)));
-  for(let j=0;j<grain;j++){
-   const oi=(pos+j)%outLen,w=.5-.5*Math.cos(Math.PI*2*j/(grain-1)),si=Math.min(b-1,off+Math.floor(j*rate));
-   weights[oi]+=w;
-   for(let ch=0;ch<channels;ch++)outs[ch][oi]+=buf.getChannelData(ch)[si]*w
-  }
+
+function prepareFartSustain(buf,ac,start,end){
+ if(fartSustainBuffer)return Promise.resolve(fartSustainBuffer);
+ if(fartSustainPromise)return fartSustainPromise;
+ const Offline=window.OfflineAudioContext||window.webkitOfflineAudioContext;
+ if(!Offline)return Promise.resolve(null);
+
+ const sr=buf.sampleRate,channels=Math.max(1,buf.numberOfChannels),seconds=8;
+ const off=new Offline(channels,Math.floor(sr*seconds),sr);
+ const master=off.createGain();master.gain.value=.78;master.connect(off.destination);
+
+ let t=-.25;
+ while(t<seconds+.25){
+  const dur=.18+Math.random()*.10;
+  const rate=.96+Math.random()*.08;
+  const sourceDur=Math.min(end-start,dur*rate);
+  const room=Math.max(0,(end-start)-sourceDur);
+  const offset=start+Math.random()*room;
+  const st=Math.max(0,t),trim=st-t,playDur=Math.max(.04,dur-trim);
+  const src=off.createBufferSource(),g=off.createGain();
+  src.buffer=buf;src.playbackRate.value=rate;
+
+  const peak=.18+Math.random()*.07;
+  const fade=Math.min(.085,playDur*.46);
+  g.gain.setValueAtTime(0,st);
+  g.gain.linearRampToValueAtTime(peak,st+fade);
+  g.gain.setValueAtTime(peak,Math.max(st+fade,st+playDur-fade));
+  g.gain.linearRampToValueAtTime(0,st+playDur);
+
+  src.connect(g);g.connect(master);
+  const sourceOffset=Math.min(end-.012,offset+trim*rate);
+  const sourceLeft=Math.max(.015,end-sourceOffset);
+  src.start(st,sourceOffset,Math.min(sourceLeft,playDur*rate));
+
+  t+=.030+Math.random()*.026;
  }
- for(let i=0;i<outLen;i++){const w=Math.max(.0001,weights[i]);for(let ch=0;ch<channels;ch++)outs[ch][i]/=w}
- return out
+
+ fartSustainPromise=off.startRendering()
+  .then(b=>{fartSustainBuffer=b;return b})
+  .catch(()=>null)
+  .finally(()=>{fartSustainPromise=null});
+ return fartSustainPromise
 }
+
 function stopRealFartAudio(){
  fartAudioSession++;
- if(fartGrainTimer){clearInterval(fartGrainTimer);fartGrainTimer=0}
+ if(fartPitchTimer){clearTimeout(fartPitchTimer);fartPitchTimer=0}
  const ac=A.ctx,g=fartRealGain;
- if(ac&&g){const t=ac.currentTime;try{g.gain.cancelScheduledValues(t);g.gain.setValueAtTime(g.gain.value,t);g.gain.linearRampToValueAtTime(0,t+.045)}catch(e){}}
+ if(ac&&g){
+  const t=ac.currentTime;
+  try{g.gain.cancelScheduledValues(t);g.gain.setValueAtTime(g.gain.value,t);g.gain.linearRampToValueAtTime(0,t+.05)}catch(e){}
+ }
  const nodes=fartAudioNodes.splice(0);
- setTimeout(()=>{for(const n of nodes)try{n.stop()}catch(e){}},55);
+ setTimeout(()=>{for(const n of nodes)try{n.stop()}catch(e){}},60);
  fartRealGain=null
 }
+
 function playFartRelease(){
  if(!A.ctx)return;
  stopRealFartAudio();
  const session=fartAudioSession,ac=A.ctx;
+
  loadFartBuffer().then(buf=>{
   if(!buf||!F.active||session!==fartAudioSession)return;
-  const now=ac.currentTime+.015,master=ac.createGain();fartRealGain=master;master.gain.value=1;master.connect(ac.destination);
-  const d=buf.duration,tailStart=0,tailEnd=Math.min(.30,d-.025),sustainAt=.20;
-  const intro=ac.createBufferSource(),ig=ac.createGain();intro.buffer=buf;intro.connect(ig);ig.connect(master);
-  ig.gain.setValueAtTime(1,now);ig.gain.setValueAtTime(1,now+Math.max(.20,d-.16));ig.gain.linearRampToValueAtTime(0,now+d+.02);
-  intro.start(now,0);intro.stop(now+d+.03);fartAudioNodes.push(intro);intro.onended=()=>{const j=fartAudioNodes.indexOf(intro);if(j>=0)fartAudioNodes.splice(j,1)};
-  const sustain=buildFartSustain(buf,ac,tailStart,tailEnd),src=ac.createBufferSource(),sg=ac.createGain();
-  src.buffer=sustain;src.loop=true;src.playbackRate.value=1;src.connect(sg);sg.connect(master);
-  const st=now+sustainAt,handoff=now+Math.max(.42,d-.20);
-  sg.gain.setValueAtTime(0,st);sg.gain.linearRampToValueAtTime(.28,st+.18);sg.gain.setValueAtTime(.28,handoff);sg.gain.linearRampToValueAtTime(.62,now+d+.04);
-  src.start(st);fartAudioNodes.push(src);
-  const pitchDrift=()=>{if(!F.active||session!==fartAudioSession)return;const t=ac.currentTime,target=1+Math.pow(Math.random(),1.35)*.50,smooth=.38+Math.random()*.42;src.playbackRate.setTargetAtTime(target,t,smooth);fartGrainTimer=setTimeout(pitchDrift,650+Math.random()*1050)};fartGrainTimer=setTimeout(pitchDrift,Math.max(250,(d-sustainAt)*1000+120))
+
+  const now=ac.currentTime+.012,d=buf.duration,tailStart=0,tailEnd=Math.min(.30,d-.025);
+  const master=ac.createGain();fartRealGain=master;master.gain.value=1;master.connect(ac.destination);
+
+  const intro=ac.createBufferSource(),ig=ac.createGain();
+  intro.buffer=buf;intro.connect(ig);ig.connect(master);
+  ig.gain.setValueAtTime(1,now);
+  ig.gain.setValueAtTime(1,now+Math.max(.20,d-.18));
+  ig.gain.linearRampToValueAtTime(0,now+d+.04);
+  intro.start(now,0);intro.stop(now+d+.05);
+  fartAudioNodes.push(intro);
+  intro.onended=()=>{const j=fartAudioNodes.indexOf(intro);if(j>=0)fartAudioNodes.splice(j,1)};
+
+  prepareFartSustain(buf,ac,tailStart,tailEnd).then(sustain=>{
+   if(!sustain||!F.active||session!==fartAudioSession)return;
+
+   const t=ac.currentTime;
+   const base=ac.createBufferSource(),baseG=ac.createGain();
+   const squeak=ac.createBufferSource(),squeakG=ac.createGain();
+   base.buffer=sustain;base.loop=true;base.playbackRate.value=1;
+   squeak.buffer=sustain;squeak.loop=true;squeak.playbackRate.value=1;
+   base.connect(baseG);baseG.connect(master);
+   squeak.connect(squeakG);squeakG.connect(master);
+
+   baseG.gain.setValueAtTime(0,t);
+   squeakG.gain.setValueAtTime(0,t);
+   baseG.gain.linearRampToValueAtTime(.58,t+.24);
+   squeakG.gain.linearRampToValueAtTime(.04,t+.24);
+
+   base.start(t,0);
+   squeak.start(t,.13);
+   fartAudioNodes.push(base,squeak);
+
+   const drift=()=>{
+    if(!F.active||session!==fartAudioSession)return;
+    const n=ac.currentTime;
+    const target=1.03+Math.pow(Math.random(),1.45)*.42;
+    const amount=(target-1.03)/.42;
+    squeak.playbackRate.setTargetAtTime(target,n,.45+Math.random()*.45);
+    squeakG.gain.setTargetAtTime(.035+.11*amount,n,.35);
+    baseG.gain.setTargetAtTime(.58-.05*amount,n,.35);
+    fartPitchTimer=setTimeout(drift,900+Math.random()*1500);
+   };
+   fartPitchTimer=setTimeout(drift,1000+Math.random()*900);
+  })
  })
 }
 function stopFart(){F.active=false;F.t=0;F.emit=0;F.clipPlayed=false;stopRealFartAudio();stopVoice()}
-function beginMove(id){if(menuOpen||!S.start)return;audio();if(id==='fart'){if(!fartReady()){say('Fart sprites are loading…');return}if(headActive||!P.ground||P.crouch||F.active)return;F.active=true;F.t=0;F.emit=0;F.clipPlayed=false;F.dir=P.dir;P.vx=0}else if(id==='headbutt'&&!F.active){if(!headOK){say('Headbutt sprites are loading…');return}startHead()}}
+function beginMove(id){if(menuOpen||!S.start)return;audio();if(id==='fart'){if(!fartReady()){say('Fart sprites are loading…');return}if(headActive||!P.ground||P.crouch||F.active)return;F.active=true;F.t=0;F.emit=0;F.clipPlayed=false;F.dir=P.dir;P.vx=0;loadFartBuffer().then(buf=>{if(buf&&A.ctx)prepareFartSustain(buf,A.ctx,0,Math.min(.30,buf.duration-.025))})}else if(id==='headbutt'&&!F.active){if(!headOK){say('Headbutt sprites are loading…');return}startHead()}}
 function pressSlot(i,token){if(held.has(token)||!slots[i])return;held.set(token,slots[i]);beginMove(slots[i])}
 function releaseToken(token){const id=held.get(token);held.delete(token);if(id==='fart'&&![...held.values()].includes('fart'))stopFart()}
 function releaseAll(){held.clear();keys.clear();I.mx=I.my=0;I.jump=false;I.jumpDown=false;I.headDown=false;I.pp=I.jp=I.ap=null;headActive=false;headT=0;P.vx=0;stopFart()}
