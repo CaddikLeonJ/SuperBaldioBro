@@ -91,7 +91,7 @@ function playFartRelease(){
   const st=now+sustainAt,handoff=now+Math.max(.42,d-.20);
   sg.gain.setValueAtTime(0,st);sg.gain.linearRampToValueAtTime(.28,st+.18);sg.gain.setValueAtTime(.28,handoff);sg.gain.linearRampToValueAtTime(.62,now+d+.04);
   src.start(st);fartAudioNodes.push(src);
-  const pitchDrift=()=>{if(!F.active||session!==fartAudioSession)return;const t=ac.currentTime,r=Math.random(),target=r<.55?.965+Math.random()*.03:r<.90?.995+Math.random()*.025:1.02+Math.random()*.02,smooth=.48+Math.random()*.42;src.playbackRate.setTargetAtTime(target,t,smooth);fartGrainTimer=setTimeout(pitchDrift,700+Math.random()*1100)};fartGrainTimer=setTimeout(pitchDrift,700+Math.random()*900)
+  const pitchDrift=()=>{if(!F.active||session!==fartAudioSession)return;const t=ac.currentTime,target=1+Math.pow(Math.random(),1.35)*.50,smooth=.38+Math.random()*.42;src.playbackRate.setTargetAtTime(target,t,smooth);fartGrainTimer=setTimeout(pitchDrift,650+Math.random()*1050)};fartGrainTimer=setTimeout(pitchDrift,Math.max(250,(d-sustainAt)*1000+120))
  })
 }
 function stopFart(){F.active=false;F.t=0;F.emit=0;F.clipPlayed=false;stopRealFartAudio();stopVoice()}
