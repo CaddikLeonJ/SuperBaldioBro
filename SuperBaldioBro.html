@@ -40,12 +40,15 @@ function idleFrame(){
  if(!ref||!ref.complete||!ref.naturalWidth||!idle.complete)return sprite(idle,96);
  const rb=spriteBounds(ref),b=spriteBounds(idle),visibleH=96*rb.h,drawH=visibleH/Math.max(.01,b.h),drawW=idle.width*(drawH/idle.height);
  const refBottom=-96+96*(rb.y+rb.h),drawY=refBottom-drawH*(b.y+b.h),drawX=-drawW*(b.x+b.w/2),px=P.x-S.cam+P.w/2,py=P.y+P.h+11.5;
- x.save();x.translate(px,py);if(P.dir<0)x.scale(-1,1);
- x.drawImage(idle,drawX,drawY,drawW,drawH);
  const iw=idle.naturalWidth||idle.width,ih=idle.naturalHeight||idle.height,headScale=1.12;
  const sx=(b.x+b.w*.20)*iw,sy=b.y*ih,sw=b.w*.60*iw,sh=b.h*.34*ih;
  const dx=drawX+(sx/iw)*drawW,dy=drawY+(sy/ih)*drawH,dw=(sw/iw)*drawW,dh=(sh/ih)*drawH;
- const ndw=dw*headScale,ndh=dh*headScale,cx=dx+dw/2,bottom=dy+dh;
+ const ndw=dw*headScale,ndh=dh*headScale,cx=dx+dw/2,bottom=dy+dh,rx=sx+sw,rw=iw-rx,by=sy+sh,bh=ih-by;
+ x.save();x.translate(px,py);if(P.dir<0)x.scale(-1,1);
+ if(sy>0)x.drawImage(idle,0,0,iw,sy,drawX,drawY,drawW,drawH*(sy/ih));
+ if(sx>0)x.drawImage(idle,0,sy,sx,sh,drawX,drawY+drawH*(sy/ih),drawW*(sx/iw),drawH*(sh/ih));
+ if(rw>0)x.drawImage(idle,rx,sy,rw,sh,drawX+drawW*(rx/iw),drawY+drawH*(sy/ih),drawW*(rw/iw),drawH*(sh/ih));
+ if(bh>0)x.drawImage(idle,0,by,iw,bh,drawX,drawY+drawH*(by/ih),drawW,drawH*(bh/ih));
  x.drawImage(idle,sx,sy,sw,sh,cx-ndw/2,bottom-ndh,ndw,ndh);
  x.restore()
 }function crouchFrame(){let i=2;if(crouchState==='downing')i=crouchT<.06?0:crouchT<.12?1:2;else if(crouchState==='uping')i=crouchT<.06?2:crouchT<.12?1:0;else if(crouchState!=='down')return;const im=crouchImgs[i];if(!im||!im.complete)return ph();const targetH=96,scale=targetH/im.height,drawW=im.width*scale,px=P.x-S.cam+P.w/2,py=P.y+P.h+11.5;x.save();x.translate(px,py);if(P.dir<0)x.scale(-1,1);x.drawImage(im,-drawW/2,-targetH,drawW,targetH);x.restore()}
