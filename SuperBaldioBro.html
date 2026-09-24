@@ -301,8 +301,8 @@ function hurtSquirrel(damage,stun=false){
  if(squirrel.hp<=0){setSquirrelState('defeated',999);return}
  if(stun&&squirrel.state!=='stunned')setSquirrelState('stunned',.68)
 }
-function squirrelPlayerHit(range=46,height=44){
- const e=squirrelRect(),front=squirrel.dir>0?{x:e.x+e.w-5,y:e.y+8,w:range,h:height}:{x:e.x-range+5,y:e.y+8,w:range,h:height};
+function squirrelPlayerHit(range=64,height=62){
+ const e=squirrelRect(),hitY=e.y+e.h-height,front=squirrel.dir>0?{x:e.x+e.w-8,y:hitY,w:range,h:height}:{x:e.x-range+8,y:hitY,w:range,h:height};
  return rectHits(front,{x:P.x,y:P.y,w:P.w,h:P.h})
 }
 function squirrelChooseAttack(){
@@ -329,22 +329,25 @@ function updateSquirrel(dt){
  if(squirrel.state==='stunned'){if(squirrel.stateT>=squirrel.stateDur){setSquirrelState('idle',.42);squirrel.attackCooldown=.7}return}
  if(squirrel.state==='crouch'){squirrel.dir=dx<0?-1:1;if(squirrel.stateT>=squirrel.stateDur)setSquirrelState('pounce',.8);return}
  if(squirrel.state==='claw'){
-  if(!squirrel.attackDone&&squirrel.stateT>=.17){squirrel.attackDone=true;squirrelEffect('claw',.24);if(squirrelPlayerHit(48,46))hurtFatNap()}
+  if(!squirrel.attackDone&&squirrel.stateT>=.17){squirrel.attackDone=true;squirrelEffect('claw',.24);if(squirrelPlayerHit(76,66))hurtFatNap()}
   if(squirrel.stateT>=squirrel.stateDur){setSquirrelState('idle',.34);squirrel.attackCooldown=.82}return
  }
  if(squirrel.state==='bite'){
-  if(!squirrel.attackDone&&squirrel.stateT>=.20){squirrel.attackDone=true;squirrelEffect('bite',.22);if(squirrelPlayerHit(42,42))hurtFatNap()}
+  if(!squirrel.attackDone&&squirrel.stateT>=.20){squirrel.attackDone=true;squirrelEffect('bite',.22);if(squirrelPlayerHit(68,62))hurtFatNap()}
   if(squirrel.stateT>=squirrel.stateDur){setSquirrelState('idle',.34);squirrel.attackCooldown=.86}return
  }
  if(squirrel.state==='tail'){
-  if(!squirrel.attackDone&&squirrel.stateT>=.22){squirrel.attackDone=true;squirrelEffect('tail',.32);const e=squirrelRect(),cx=e.x+e.w/2,cy=e.y+e.h/2,px=P.x+P.w/2,py=P.y+P.h/2;if(Math.hypot(px-cx,py-cy)<72)hurtFatNap()}
+  if(!squirrel.attackDone&&squirrel.stateT>=.22){squirrel.attackDone=true;squirrelEffect('tail',.32);const e=squirrelRect(),cx=e.x+e.w/2,cy=e.y+e.h*.72,px=P.x+P.w/2,py=P.y+P.h/2;if(Math.hypot(px-cx,py-cy)<105)hurtFatNap()}
   if(squirrel.stateT>=squirrel.stateDur){setSquirrelState('idle',.38);squirrel.attackCooldown=.9}return
  }
  if(squirrel.state==='pounce'){
   if(!squirrel.attackDone&&squirrel.stateT>=.07&&rectHits(squirrelRect(),{x:P.x,y:P.y,w:P.w,h:P.h})){squirrel.attackDone=true;squirrelEffect('pounceHit',.25);hurtFatNap()}
   return
  }
- if(squirrel.state==='jump')return;
+ if(squirrel.state==='jump'){
+  if(!squirrel.attackDone&&squirrel.stateT>=.07&&rectHits(squirrelRect(),{x:P.x,y:P.y,w:P.w,h:P.h})){squirrel.attackDone=true;squirrelEffect('pounceHit',.22);hurtFatNap()}
+  return
+ }
  if(squirrel.state==='idle'){
   squirrel.dir=dx<0?-1:1;
   if(squirrel.stateT>=squirrel.stateDur)setSquirrelState('walk',999);
@@ -367,7 +370,7 @@ function updateSquirrelFx(dt){for(let i=squirrelFx.length-1;i>=0;i--){const f=sq
 function drawGas(){for(const p of gas){const a=(1-p.age/p.life)*.42,px=p.x-S.cam;x.save();x.globalAlpha=a;const g=x.createRadialGradient(px,p.y,0,px,p.y,p.r);g.addColorStop(0,'#aecb41');g.addColorStop(.55,'#739839');g.addColorStop(1,'rgba(80,122,38,0)');x.fillStyle=g;x.beginPath();x.arc(px,p.y,p.r,0,Math.PI*2);x.fill();x.restore()}}
 function drawSquirrelSprite(img,r,targetH){
  if(!img||!img.complete||!img.naturalWidth)return false;
- const scale=targetH/r[3],drawW=r[2]*scale,baseline=fy()+11.5+squirrel.air,px=squirrel.x+squirrel.w/2-S.cam;
+ const scale=targetH/r[3],drawW=r[2]*scale,baseline=fy()+11.5+squirrel.air+(squirrel.state==='defeated'?8:0),px=squirrel.x+squirrel.w/2-S.cam;
  x.save();x.translate(px,baseline);if(squirrel.dir<0)x.scale(-1,1);if(squirrel.flash>0)x.globalAlpha=.58;
  x.drawImage(img,r[0],r[1],r[2],r[3],-drawW/2,-targetH,drawW,targetH);x.restore();return true
 }
