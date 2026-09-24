@@ -64,22 +64,66 @@ const VERSION='0.3.3', ASSET_ROOT='https://raw.githubusercontent.com/CaddikLeonJ
 const MOVES={headbutt:{name:'Headbutt',description:'Tap to strike in front of you.'},fart:{name:'Fart',description:'Hold to turn and blast gas toward your aim. Gas deals 30 damage per second.'}};
 let slots=['headbutt','fart',null],menuOpen=false,selectedSlot=0,notice='',noticeUntil=0;
 try {const saved=JSON.parse(localStorage.getItem('fatnap.moves.v1'));if(Array.isArray(saved)&&saved.length===3){const seen=new Set();slots=saved.map(id=>MOVES[id]&&!seen.has(id)?(seen.add(id),id):null)}}catch{}
-const F={active:false,t:0,emit:0,dir:1,voice:null,variant:0},gas=[],targets=[],held=new Map(),keys=new Set();
+const F={active:false,t:0,emit:0,dir:1,voice:null,variant:0},gas=[],squirrelFx=[],held=new Map(),keys=new Set();
 const fartImgs=[26,27,28,29].map(n=>{const im=new Image();im.src=ASSET_ROOT+encodeURIComponent(`FAT NAP SPRITES (CHARACTER MODELS) - ${n}.png`);return im});
 const fartReady=()=>fartImgs.every(im=>im.complete&&im.naturalWidth>0);
+const squirrelActionSheet=new Image(),squirrelWalkSheet=new Image(),squirrelModelSheet=new Image();
+let squirrelAssetsReady=false;
+const SQUIRREL_ACTION_RECTS={
+ idle:[190,181,455,611],jump:[2245,136,633,536],crouch:[132,912,558,487],
+ claw:[721,870,659,535],bite:[1518,921,651,482],pounce:[2150,856,791,468],
+ tail:[138,1514,598,538],stunned:[1524,1582,566,476],defeated:[2150,1667,801,378]
+};
+const SQUIRREL_WALK_RECTS=[[127,383,1370,1387],[1532,382,1338,1404]];
+const squirrel={x:520,w:46,h:56,hp:100,maxHp:100,dir:-1,state:'idle',stateT:0,stateDur:.75,
+ attackCooldown:.8,attackCycle:0,air:0,vy:0,vx:0,flash:0,attackDone:false};
+async function loadSquirrelAssetsFromZip(){
+ const url="https://raw.githubusercontent.com/CaddikLeonJ/SuperBaldioBro/main/"+encodeURI("Ayofatnap Squirrel.zip");
+ const res=await fetch(url,{cache:"no-store"});if(!res.ok)throw new Error("squirrel zip "+res.status);
+ const buf=await res.arrayBuffer(),dv=new DataView(buf),bytes=new Uint8Array(buf),td=new TextDecoder();
+ let eocd=-1;for(let p=bytes.length-22;p>=Math.max(0,bytes.length-65557);p--){if(dv.getUint32(p,true)===0x06054b50){eocd=p;break}}
+ if(eocd<0)throw new Error("squirrel zip directory");
+ const count=dv.getUint16(eocd+10,true),cdOffset=dv.getUint32(eocd+16,true),entries={};let p=cdOffset;
+ const wanted={
+  "Ayofatnap Squirrel Action Animations.PNG":squirrelActionSheet,
+  "Ayofatnap Squirrel Walk Animation.PNG":squirrelWalkSheet,
+  "Ayofatnap Squirrel Model.PNG":squirrelModelSheet
+ };
+ for(let n=0;n<count;n++){
+  if(dv.getUint32(p,true)!==0x02014b50)break;
+  const method=dv.getUint16(p+10,true),compSize=dv.getUint32(p+20,true),rawSize=dv.getUint32(p+24,true),
+        nameLen=dv.getUint16(p+28,true),extraLen=dv.getUint16(p+30,true),commentLen=dv.getUint16(p+32,true),
+        localOffset=dv.getUint32(p+42,true),name=td.decode(bytes.subarray(p+46,p+46+nameLen)),base=name.split("/").pop();
+  if(wanted[base])entries[base]={method,compSize,rawSize,localOffset};
+  p+=46+nameLen+extraLen+commentLen;
+ }
+ async function loadEntry(name,img){
+  const e=entries[name];if(!e)throw new Error("missing "+name);
+  const lp=e.localOffset;if(dv.getUint32(lp,true)!==0x04034b50)throw new Error("bad squirrel local header");
+  const nl=dv.getUint16(lp+26,true),el=dv.getUint16(lp+28,true),start=lp+30+nl+el,packed=bytes.slice(start,start+e.compSize);
+  let raw;if(e.method===0)raw=packed;
+  else if(e.method===8){const stream=new Blob([packed]).stream().pipeThrough(new DecompressionStream("deflate-raw"));raw=new Uint8Array(await new Response(stream).arrayBuffer())}
+  else throw new Error("unsupported squirrel zip method "+e.method);
+  const objectURL=URL.createObjectURL(new Blob([raw],{type:"image/png"}));
+  await new Promise((resolve,reject)=>{img.onload=()=>{URL.revokeObjectURL(objectURL);resolve()};img.onerror=()=>{URL.revokeObjectURL(objectURL);reject(new Error("squirrel PNG decode"))};img.src=objectURL});
+ }
+ await Promise.all(Object.entries(wanted).map(([name,img])=>loadEntry(name,img)));
+ squirrelAssetsReady=true;
+}
+loadSquirrelAssetsFromZip().catch(()=>{squirrelAssetsReady=false});
 function say(message){notice=message;noticeUntil=S.t+3}
-function resetTargets(){gas.length=0;targets.length=0;[90,390,680,1000,1320].forEach((wx,i)=>targets.push({x:wx,w:28,h:62,hp:60,maxHp:60,flash:0,id:i}));}
-resetTargets();
+function resetSquirrel(){gas.length=0;squirrelFx.length=0;Object.assign(squirrel,{x:520,w:46,h:56,hp:100,maxHp:100,dir:-1,state:'idle',stateT:0,stateDur:.75,attackCooldown:.8,attackCycle:0,air:0,vy:0,vx:0,flash:0,attackDone:false})}
+resetSquirrel();
 function saveMoves(){try{localStorage.setItem('fatnap.moves.v1',JSON.stringify(slots))}catch{say('Loadout saved for this session')}}
-const menu=document.createElement('div');menu.id='move-menu';menu.hidden=true;menu.innerHTML=`<section role="dialog" aria-modal="true" aria-labelledby="move-title"><h1 id="move-title">Your moves</h1><p>Choose a slot, then choose a move.</p><div id="slot-list"></div><div id="move-list"></div><p class="hint">All moves unlocked for testing. More moves will appear here as they are added.</p><button id="reset-targets">Reset practice targets</button><button id="resume-game">Back to game</button></section>`;document.body.append(menu);
+const menu=document.createElement('div');menu.id='move-menu';menu.hidden=true;menu.innerHTML=`<section role="dialog" aria-modal="true" aria-labelledby="move-title"><h1 id="move-title">Your moves</h1><p>Choose a slot, then choose a move.</p><div id="slot-list"></div><div id="move-list"></div><p class="hint">All moves unlocked for testing. More moves will appear here as they are added.</p><button id="reset-squirrel">Reset squirrel</button><button id="resume-game">Back to game</button></section>`;document.body.append(menu);
 const menuButton=document.createElement('button');menuButton.id='moves-button';menuButton.textContent='MOVES';menuButton.hidden=true;document.body.append(menuButton);
-const style=document.createElement('style');style.textContent=`#moves-button{position:fixed;top:max(40px,env(safe-area-inset-top));right:12px;padding:10px 16px;border-radius:12px;background:#182638;color:#fff;border:1px solid #8097ad;font-weight:bold}#move-menu{position:fixed;inset:0;background:rgba(4,9,18,.94);z-index:10;overflow:auto;touch-action:pan-y;padding: max(16px,env(safe-area-inset-top)) 16px max(16px,env(safe-area-inset-bottom));box-sizing:border-box;color:#edf3ff}#move-menu[hidden],#moves-button[hidden]{display:none}#move-menu section{max-width:440px;margin:0 auto}#move-menu h1{font-size:27px;margin:12px 0}#move-menu p{line-height:1.45;color:#b8c5d6}#move-menu button{font:inherit;color:#fff;border:1px solid #607188;background:#1c2b40;border-radius:12px;padding:13px;text-align:left;touch-action:manipulation}#slot-list{display:flex;gap:8px;margin:18px 0}#slot-list button{flex:1;padding:12px 6px;text-align:center;font-size:13px}#slot-list button[aria-pressed=true]{background:#315c7a;border:2px solid #9debc2}#move-list{display:grid;gap:10px}#move-list small{display:block;color:#c2cfdd;line-height:1.45;margin-top:7px}#move-menu .hint{font-size:13px}#reset-targets,#resume-game{width:100%;margin:5px 0}#resume-game{background:#30664e!important;text-align:center!important;font-weight:bold!important}`;document.head.append(style);
+const style=document.createElement('style');style.textContent=`#moves-button{position:fixed;top:max(40px,env(safe-area-inset-top));right:12px;padding:10px 16px;border-radius:12px;background:#182638;color:#fff;border:1px solid #8097ad;font-weight:bold}#move-menu{position:fixed;inset:0;background:rgba(4,9,18,.94);z-index:10;overflow:auto;touch-action:pan-y;padding: max(16px,env(safe-area-inset-top)) 16px max(16px,env(safe-area-inset-bottom));box-sizing:border-box;color:#edf3ff}#move-menu[hidden],#moves-button[hidden]{display:none}#move-menu section{max-width:440px;margin:0 auto}#move-menu h1{font-size:27px;margin:12px 0}#move-menu p{line-height:1.45;color:#b8c5d6}#move-menu button{font:inherit;color:#fff;border:1px solid #607188;background:#1c2b40;border-radius:12px;padding:13px;text-align:left;touch-action:manipulation}#slot-list{display:flex;gap:8px;margin:18px 0}#slot-list button{flex:1;padding:12px 6px;text-align:center;font-size:13px}#slot-list button[aria-pressed=true]{background:#315c7a;border:2px solid #9debc2}#move-list{display:grid;gap:10px}#move-list small{display:block;color:#c2cfdd;line-height:1.45;margin-top:7px}#move-menu .hint{font-size:13px}#reset-squirrel,#resume-game{width:100%;margin:5px 0}#resume-game{background:#30664e!important;text-align:center!important;font-weight:bold!important}`;document.head.append(style);
 function populateMenu(){
  const list=document.getElementById('slot-list');list.replaceChildren();slots.forEach((id,i)=>{const b=document.createElement('button');b.textContent=`${i+1} · ${id?MOVES[id].name:'Empty'}`;b.setAttribute('aria-pressed',i===selectedSlot);b.onclick=()=>{selectedSlot=i;populateMenu()};list.append(b)});
  const list2=document.getElementById('move-list');list2.replaceChildren();[...Object.keys(MOVES),null].forEach(id=>{const b=document.createElement('button');b.textContent=id?MOVES[id].name:'Empty slot';const small=document.createElement('small');small.textContent=id?MOVES[id].description:'Unequip the selected slot.';b.append(small);b.onclick=()=>{const other=id?slots.indexOf(id):-1;if(other>=0&&other!==selectedSlot)slots[other]=slots[selectedSlot];slots[selectedSlot]=id;saveMoves();populateMenu()};list2.append(b)});
 }
 function setMenu(open){releaseAll();menuOpen=open;menu.hidden=!open;menuButton.hidden=open||!S.start;S.acc=0;S.last=performance.now();if(open){populateMenu();document.getElementById('resume-game').focus()}else{menuButton.focus()}}
-menuButton.onclick=()=>setMenu(true);document.getElementById('resume-game').onclick=()=>setMenu(false);document.getElementById('reset-targets').onclick=()=>{resetTargets();document.getElementById('reset-targets').textContent='Targets reset ✓'};
+menuButton.onclick=()=>setMenu(true);document.getElementById('resume-game').onclick=()=>setMenu(false);document.getElementById('reset-squirrel').onclick=()=>{resetSquirrel();document.getElementById('reset-squirrel').textContent='Squirrel reset ✓'};
 function stopVoice(){if(!F.voice)return;const v=F.voice;F.voice=null;const now=A.ctx.currentTime;v.out.gain.cancelScheduledValues(now);v.out.gain.setValueAtTime(v.out.gain.value,now);v.out.gain.linearRampToValueAtTime(0,now+.035);v.sources.forEach(s=>{try{s.stop(now+.04)}catch{}});setTimeout(()=>v.nodes.forEach(n=>n.disconnect()),80)}
 function startVoice(){
  if(F.voice||!A.ctx)return;const ac=A.ctx,t=ac.currentTime,rand=(a,b)=>a+Math.random()*(b-a);
@@ -226,25 +270,142 @@ function releaseAll(){held.clear();keys.clear();I.mx=I.my=0;I.jump=false;I.jumpD
 function fartIndex(){return F.t<.14?0:F.t<.28?1:F.t<.44?2:3}
 function fartOrigin(){return {x:P.x+P.w/2+F.dir*14.33,y:P.y+P.h-25.33}}
 function fartFrame(){const im=fartImgs[fartIndex()],h=96,w=im.width*h/im.height;x.save();x.translate(P.x-S.cam+P.w/2,P.y+P.h+11.5);if(F.dir<0)x.scale(-1,1);x.drawImage(im,-w/2,-h,w,h);x.restore()}
-function circleHits(p,e){const y=fy()-e.h;const dx=p.x-cl(p.x,e.x,e.x+e.w),dy=p.y-cl(p.y,y,y+e.h);return dx*dx+dy*dy<=p.r*p.r}
-function hurt(e,damage){if(e.hp<=0)return;e.hp=Math.max(0,e.hp-damage);e.flash=.08}
+function squirrelRect(){return{x:squirrel.x,y:fy()+squirrel.air-squirrel.h,w:squirrel.w,h:squirrel.h}}
+function rectHits(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y}
+function circleHitsSquirrel(p){const e=squirrelRect(),dx=p.x-cl(p.x,e.x,e.x+e.w),dy=p.y-cl(p.y,e.y,e.y+e.h);return dx*dx+dy*dy<=p.r*p.r}
+function squirrelEffect(type,life=.28){squirrelFx.push({type,x:squirrel.x+squirrel.w/2,y:fy()+squirrel.air-squirrel.h*.48,dir:squirrel.dir,age:0,life})}
+function squirrelSfx(type){
+ if(!A.ctx)return;
+ if(type==='jump'){noise(.05,.025);beep(480,.07,.035)}
+ else if(type==='claw'){noise(.08,.08);beep(240,.05,.055)}
+ else if(type==='bite'){thump(.07);beep(150,.055,.07)}
+ else if(type==='pounce'){noise(.12,.06);beep(210,.08,.05)}
+ else if(type==='tail'){noise(.10,.07);thump(.055)}
+ else if(type==='stunned'){beep(620,.08,.055);beep(790,.09,.04,.07)}
+ else if(type==='defeated'){thump(.1);noise(.08,.045)}
+}
+function setSquirrelState(state,dur=0){
+ squirrel.state=state;squirrel.stateT=0;squirrel.stateDur=dur;squirrel.attackDone=false;
+ if(state==='jump'){squirrel.air=-2;squirrel.vy=-315;squirrel.vx=squirrel.dir*62;squirrelEffect('dust',.25);squirrelSfx('jump')}
+ else if(state==='pounce'){squirrel.air=-4;squirrel.vy=-250;squirrel.vx=squirrel.dir*255;squirrelEffect('pounce',.34);squirrelSfx('pounce')}
+ else if(state==='claw')squirrelSfx('claw');
+ else if(state==='bite')squirrelSfx('bite');
+ else if(state==='tail')squirrelSfx('tail');
+ else if(state==='stunned'){squirrel.vx=0;squirrelSfx('stunned')}
+ else if(state==='defeated'){squirrel.vx=0;squirrel.vy=0;squirrel.air=0;squirrelSfx('defeated');squirrelEffect('dust',.45)}
+}
+function hurtSquirrel(damage,stun=false){
+ if(squirrel.hp<=0)return;
+ squirrel.hp=Math.max(0,squirrel.hp-damage);squirrel.flash=.09;
+ if(squirrel.hp<=0){setSquirrelState('defeated',999);return}
+ if(stun&&squirrel.state!=='stunned')setSquirrelState('stunned',.68)
+}
+function squirrelPlayerHit(range=46,height=44){
+ const e=squirrelRect(),front=squirrel.dir>0?{x:e.x+e.w-5,y:e.y+8,w:range,h:height}:{x:e.x-range+5,y:e.y+8,w:range,h:height};
+ return rectHits(front,{x:P.x,y:P.y,w:P.w,h:P.h})
+}
+function squirrelChooseAttack(){
+ const sequence=['claw','bite','pounce','tail','jump'],next=sequence[squirrel.attackCycle++%sequence.length];
+ if(next==='pounce')setSquirrelState('crouch',.34);
+ else if(next==='claw')setSquirrelState('claw',.42);
+ else if(next==='bite')setSquirrelState('bite',.46);
+ else if(next==='tail')setSquirrelState('tail',.56);
+ else setSquirrelState('jump',1.2);
+}
+function updateSquirrel(dt){
+ squirrel.flash=Math.max(0,squirrel.flash-dt);squirrel.attackCooldown=Math.max(0,squirrel.attackCooldown-dt);squirrel.stateT+=dt;
+ if(squirrel.hp<=0)return;
+ const pc=P.x+P.w/2,sc=squirrel.x+squirrel.w/2,dx=pc-sc,adx=Math.abs(dx);
+ if(squirrel.state==='jump'||squirrel.state==='pounce'){
+  squirrel.air+=squirrel.vy*dt;squirrel.vy+=820*dt;
+  if(squirrel.state==='jump')squirrel.x+=squirrel.vx*dt;
+  else squirrel.x+=squirrel.vx*dt;
+  if(squirrel.air>=0){squirrel.air=0;squirrel.vy=0;if(squirrel.stateT>.18){squirrelEffect('dust',.26);setSquirrelState('idle',.38);squirrel.attackCooldown=.85}}
+ }
+ squirrel.x=cl(squirrel.x,24,S.ww-squirrel.w-24);
+ if(squirrel.state==='defeated')return;
+ if(squirrel.state==='stunned'){if(squirrel.stateT>=squirrel.stateDur){setSquirrelState('idle',.42);squirrel.attackCooldown=.7}return}
+ if(squirrel.state==='crouch'){squirrel.dir=dx<0?-1:1;if(squirrel.stateT>=squirrel.stateDur)setSquirrelState('pounce',.8);return}
+ if(squirrel.state==='claw'){
+  if(!squirrel.attackDone&&squirrel.stateT>=.17){squirrel.attackDone=true;squirrelEffect('claw',.24);if(squirrelPlayerHit(48,46))hurtFatNap()}
+  if(squirrel.stateT>=squirrel.stateDur){setSquirrelState('idle',.34);squirrel.attackCooldown=.82}return
+ }
+ if(squirrel.state==='bite'){
+  if(!squirrel.attackDone&&squirrel.stateT>=.20){squirrel.attackDone=true;squirrelEffect('bite',.22);if(squirrelPlayerHit(42,42))hurtFatNap()}
+  if(squirrel.stateT>=squirrel.stateDur){setSquirrelState('idle',.34);squirrel.attackCooldown=.86}return
+ }
+ if(squirrel.state==='tail'){
+  if(!squirrel.attackDone&&squirrel.stateT>=.22){squirrel.attackDone=true;squirrelEffect('tail',.32);const e=squirrelRect(),cx=e.x+e.w/2,cy=e.y+e.h/2,px=P.x+P.w/2,py=P.y+P.h/2;if(Math.hypot(px-cx,py-cy)<72)hurtFatNap()}
+  if(squirrel.stateT>=squirrel.stateDur){setSquirrelState('idle',.38);squirrel.attackCooldown=.9}return
+ }
+ if(squirrel.state==='pounce'){
+  if(!squirrel.attackDone&&squirrel.stateT>=.07&&rectHits(squirrelRect(),{x:P.x,y:P.y,w:P.w,h:P.h})){squirrel.attackDone=true;squirrelEffect('pounceHit',.25);hurtFatNap()}
+  return
+ }
+ if(squirrel.state==='jump')return;
+ if(squirrel.state==='idle'){
+  squirrel.dir=dx<0?-1:1;
+  if(squirrel.stateT>=squirrel.stateDur)setSquirrelState('walk',999);
+  return
+ }
+ if(squirrel.state==='walk'){
+  squirrel.dir=dx<0?-1:1;
+  if(adx>74)squirrel.x+=squirrel.dir*44*dt;
+  if(adx<=108&&squirrel.attackCooldown<=0)squirrelChooseAttack();
+  else if(squirrel.stateT>2.3&&adx<150){setSquirrelState('idle',.45+.35*Math.random())}
+ }
+}
 function updateAttacks(dt){
  if(F.active&&lightheadedT<=0){P.hemmergy=Math.max(0,P.hemmergy-12*dt);if(P.hemmergy<=0)enterLightheaded()}
  if(F.active){F.t+=dt;if(F.t>=.44&&!F.clipPlayed){F.clipPlayed=true;playFartRelease()}if(F.t>=.44){F.emit-=dt;while(F.emit<=0){F.emit+=.045;const o=fartOrigin();gas.push({x:o.x,y:o.y,vx:F.dir*(80+Math.random()*35),vy:-4-Math.random()*9,r:7,age:0,life:1.1+Math.random()*.3,seed:Math.random()*6.28});if(gas.length>100)gas.shift()}}}
- for(let i=gas.length-1;i>=0;i--){const p=gas[i];p.age+=dt;if(p.age>=p.life){gas.splice(i,1);continue}p.x+=p.vx*dt;p.y+=p.vy*dt;p.r=7+p.age*16;}
- for(const e of targets){e.flash=Math.max(0,e.flash-dt);if(e.hp>0&&gas.some(p=>circleHits(p,e)))hurt(e,30*dt)}
+ for(let i=gas.length-1;i>=0;i--){const p=gas[i];p.age+=dt;if(p.age>=p.life){gas.splice(i,1);continue}p.x+=p.vx*dt;p.y+=p.vy*dt;p.r=7+p.age*16}
+ if(squirrel.hp>0&&gas.some(p=>circleHitsSquirrel(p)))hurtSquirrel(30*dt,false)
 }
+function updateSquirrelFx(dt){for(let i=squirrelFx.length-1;i>=0;i--){const f=squirrelFx[i];f.age+=dt;if(f.age>=f.life)squirrelFx.splice(i,1)}}
 function drawGas(){for(const p of gas){const a=(1-p.age/p.life)*.42,px=p.x-S.cam;x.save();x.globalAlpha=a;const g=x.createRadialGradient(px,p.y,0,px,p.y,p.r);g.addColorStop(0,'#aecb41');g.addColorStop(.55,'#739839');g.addColorStop(1,'rgba(80,122,38,0)');x.fillStyle=g;x.beginPath();x.arc(px,p.y,p.r,0,Math.PI*2);x.fill();x.restore()}}
-function drawTargets(){for(const e of targets){const px=e.x-S.cam,y=fy()-e.h;if(px<-50||px>S.w+50)continue;x.save();x.globalAlpha=e.hp>0?1:.3;x.strokeStyle='#715c47';x.lineWidth=5;x.beginPath();x.moveTo(px+14,y+12);x.lineTo(px+14,fy());x.stroke();x.fillStyle=e.flash?'#f8ed8d':'#ae8562';x.fillRect(px,y+12,e.w,30);x.beginPath();x.arc(px+14,y+5,11,0,7);x.fill();x.fillStyle='#283d48';x.fillRect(px-4,y-20,36,5);x.fillStyle='#7ae08c';x.fillRect(px-4,y-20,36*e.hp/e.maxHp,5);x.font='9px Arial';x.textAlign='center';x.fillStyle='#182e3d';x.fillText(e.hp>0?Math.ceil(e.hp)+' HP':'DOWN',px+14,y-26);x.restore()}}
+function drawSquirrelSprite(img,r,scale){
+ if(!img||!img.complete||!img.naturalWidth)return false;
+ const baseline=fy()+squirrel.air+2,drawW=r[2]*scale,drawH=r[3]*scale,px=squirrel.x+squirrel.w/2-S.cam;
+ x.save();x.translate(px,baseline);if(squirrel.dir<0)x.scale(-1,1);if(squirrel.flash>0)x.globalAlpha=.58;
+ x.drawImage(img,r[0],r[1],r[2],r[3],-drawW/2,-drawH,drawW,drawH);x.restore();return true
+}
+function drawSquirrel(){
+ const px=squirrel.x+squirrel.w/2-S.cam;if(px<-110||px>S.w+110)return;
+ let drawn=false;
+ if(squirrelAssetsReady){
+  if(squirrel.state==='walk'){const i=Math.floor(squirrel.stateT/.16)%2;drawn=drawSquirrelSprite(squirrelWalkSheet,SQUIRREL_WALK_RECTS[i],46/1387)}
+  else{const key=squirrel.state==='claw'?'claw':squirrel.state==='bite'?'bite':squirrel.state==='tail'?'tail':squirrel.state;
+       const r=SQUIRREL_ACTION_RECTS[key]||SQUIRREL_ACTION_RECTS.idle;drawn=drawSquirrelSprite(squirrelActionSheet,r,58/611)}
+ }
+ if(!drawn){x.save();x.fillStyle='#a96538';x.beginPath();x.arc(px,fy()-28+squirrel.air,18,0,Math.PI*2);x.fill();x.restore()}
+ const barY=fy()+squirrel.air-70;
+ x.save();x.globalAlpha=squirrel.hp>0?1:.65;x.fillStyle='#202733';x.fillRect(px-25,barY,50,5);x.fillStyle=squirrel.hp>0?'#d85a43':'#6d7078';x.fillRect(px-25,barY,50*cl(squirrel.hp/squirrel.maxHp,0,1),5);x.strokeStyle='#10151c';x.strokeRect(px-25+.5,barY+.5,49,4);x.restore();
+ if(squirrel.state==='stunned'&&squirrel.hp>0){x.save();x.fillStyle='#ffe46a';for(let i=0;i<3;i++){const a=S.t*6+i*Math.PI*2/3;x.font='12px Arial';x.fillText('★',px+Math.cos(a)*18,barY-8+Math.sin(a)*5)}x.restore()}
+}
+function drawSquirrelFx(){
+ for(const f of squirrelFx){const p=f.age/f.life,a=1-p,px=f.x-S.cam,py=f.y;x.save();x.globalAlpha=a;x.translate(px,py);if(f.dir<0)x.scale(-1,1);
+  if(f.type==='claw'){x.strokeStyle='#f7efe0';x.lineWidth=3;for(let i=-1;i<=1;i++){x.beginPath();x.moveTo(4,-12+i*8);x.lineTo(35+p*14,-22+i*12);x.stroke()}}
+  else if(f.type==='bite'||f.type==='pounceHit'){x.strokeStyle='#ffd8a8';x.lineWidth=3;x.beginPath();x.arc(18,0,8+p*22,0,Math.PI*2);x.stroke()}
+  else if(f.type==='tail'){x.strokeStyle='#e6c19a';x.lineWidth=5-p*3;x.beginPath();x.arc(-6,5,26+p*22,-2.1,1.15);x.stroke()}
+  else if(f.type==='pounce'){x.strokeStyle='#e8d7c8';x.lineWidth=2;for(let i=-2;i<=2;i++){x.beginPath();x.moveTo(-34-i*5,i*7);x.lineTo(-8-p*18,i*7);x.stroke()}}
+  else if(f.type==='dust'){x.fillStyle='#b8a58c';for(let i=0;i<4;i++){x.beginPath();x.arc((i-1.5)*8,(i%2)*3,4+p*7,0,Math.PI*2);x.fill()}}
+  x.restore()
+ }
+}
 // Wrap the existing simulation to retain movement, landing and Headbutt timing.
-const baseStep=step;step=function(dt){const mx=I.mx,my=I.my;if(F.active){I.mx=I.my=0;I.jump=false;P.vx=0}const hitBefore=headImpactPlayed;baseStep(dt);I.mx=mx;I.my=my;if(!hitBefore&&headImpactPlayed){const hit={x:P.x+P.w/2+P.dir*18,y:P.y+P.h*.22,r:13};let damaged=false;targets.forEach(e=>{if(e.hp>0&&circleHits(hit,e)){hurt(e,50);damaged=true}});if(damaged){headFxT=.16;headImpactSfx()}}updateAttacks(dt)};
+const baseStep=step;step=function(dt){
+ const mx=I.mx,my=I.my;if(F.active){I.mx=I.my=0;I.jump=false;P.vx=0}
+ const hitBefore=headImpactPlayed;baseStep(dt);I.mx=mx;I.my=my;
+ if(!hitBefore&&headImpactPlayed&&squirrel.hp>0){const hit={x:P.x+P.w/2+P.dir*18,y:P.y+P.h*.22,r:13};if(circleHitsSquirrel(hit)){hurtSquirrel(50,true);headFxT=.16;headImpactSfx()}}
+ updateSquirrel(dt);updateAttacks(dt);updateSquirrelFx(dt)
+};
 const basePlayer=player;player=function(){if(F.active&&fartReady())fartFrame();else basePlayer()};
 function layoutControls(){const ph=S.h-S.cy;U.jr=Math.min(54,S.w*.135);U.jx=S.w*.19;U.jy=S.cy+ph*.49;U.br=Math.min(37,S.w*.092);U.bx=S.w*.85;U.by=S.cy+ph*.24;U.slots=[0,1,2].map(i=>({x:S.w*(.46+i*.21),y:S.cy+ph*.70,r:Math.min(32,S.w*.078)}))}
 const baseResize=resize;resize=function(){baseResize();layoutControls()};
 controls=function(){x.fillStyle='#0b0e16';x.fillRect(0,S.cy,S.w,S.h-S.cy);function button(cx,cy,r,label,pressed,color){x.beginPath();x.arc(cx,cy,r,0,7);x.fillStyle=pressed?'#6a915c':color;x.fill();x.strokeStyle='#7b8caa';x.lineWidth=2;x.stroke();x.fillStyle='#fff';x.font='bold 10px Arial';x.textAlign='center';x.textBaseline='middle';x.fillText(label,cx,cy)}button(U.jx,U.jy,U.jr,'',false,'#182031');x.beginPath();x.arc(U.jx+I.mx*U.jr*.52,U.jy+I.my*U.jr*.52,23,0,7);x.fillStyle='#5b6983';x.fill();button(U.bx,U.by,U.br,'JUMP',I.jumpDown,'#2e4e7b');U.slots.forEach((s,i)=>button(s.x,s.y,s.r,slots[i]?MOVES[slots[i]].name.toUpperCase():'EMPTY',[...held.values()].includes(slots[i]),slots[i]==='fart'?'#475d2a':'#542f40'));x.textBaseline='alphabetic';x.fillStyle='#a1acc0';x.font='10px Arial';x.textAlign='left';x.fillText('Stick: move / run / crouch',12,S.h-18)};
 function lightheadedFx(){if(lightheadedT<=0)return;const elapsed=lightheadedDuration-lightheadedT,frameHold=.40,px=P.x-S.cam+P.w/2,baseY=P.y+P.h+11.5,mouthX=px+P.dir*18,mouthY=baseY-61;let frameIndex,frameProgress=0;if(elapsed<.24||lightheadedT<.24)frameIndex=2;else{const mid=elapsed-.24;frameIndex=Math.floor(mid/frameHold)%2;frameProgress=(mid%frameHold)/frameHold}x.save();if(frameIndex===0){const p=frameProgress;for(let i=0;i<3;i++){const q=cl(p-i*.12,0,1);if(q<=0)continue;const bx=mouthX+P.dir*(5+q*(19+i*5)),by=mouthY-2-q*(5+i*2),r=2.7+i*1.3+q*2.5;x.globalAlpha=(1-q)*.58;x.fillStyle='#f3f7ff';x.beginPath();x.arc(bx,by,r,0,Math.PI*2);x.arc(bx-P.dir*r*.7,by+1,r*.72,0,Math.PI*2);x.fill()}}x.restore()}
 hud=function(){x.fillStyle='rgba(7,9,16,.8)';x.fillRect(0,0,S.w,30);x.fillStyle='#fff';x.font='bold 12px Arial';x.textAlign='left';x.textBaseline='alphabetic';x.fillText('SUPER BALDIO BROS. · v'+VERSION,10,20);const bw=(S.w-28)/2,bh=13,hx=10,sx=18+bw,jumpTop=U.by-U.br,labelY=jumpTop-52,by=jumpTop-47;x.font='bold 9px Arial';x.fillStyle='#fff';x.fillText('ELF BAR  '+P.hp+'/'+P.maxHp,hx,labelY);x.fillText(lightheadedT>0?'HEMMERGY BAR  LIGHT-HEADED':'HEMMERGY BAR  '+Math.ceil(P.hemmergy)+'%',sx,labelY);x.fillStyle='#181b23';x.fillRect(hx,by,bw,bh);x.fillRect(sx,by,bw,bh);x.fillStyle='#d83b3f';x.fillRect(hx,by,bw*cl(P.hp/P.maxHp,0,1),bh);x.fillStyle='#f1cf3a';x.fillRect(sx,by,bw*cl(P.hemmergy/P.maxHemmergy,0,1),bh);x.strokeStyle='#626b7d';x.lineWidth=1;x.strokeRect(hx+.5,by+.5,bw-1,bh-1);x.strokeRect(sx+.5,by+.5,bw-1,bh-1);if(noticeUntil>S.t){x.fillStyle='#162539';x.fillRect(8,88,S.w-16,34);x.fillStyle='#fff';x.font='12px Arial';x.fillText(notice,16,110)}};
-render=function(){x.setTransform(S.d,0,0,S.d,0,0);x.fillStyle='#070910';x.fillRect(0,0,S.w,S.h);room();drawTargets();player();drawGas();headAura();headMoveFx();headFx();lightheadedFx();controls();hud();overlay();menuButton.hidden=menuOpen||!S.start};
+render=function(){x.setTransform(S.d,0,0,S.d,0,0);x.fillStyle='#070910';x.fillRect(0,0,S.w,S.h);room();drawSquirrel();player();drawGas();drawSquirrelFx();headAura();headMoveFx();headFx();lightheadedFx();controls();hud();overlay();menuButton.hidden=menuOpen||!S.start};
 loop=function(t){const dt=Math.min((t-S.last)/1000,.033);S.last=t;if(!menuOpen&&!document.hidden){S.t+=dt;S.acc+=dt;while(S.acc>=1/120){if(S.start)step(1/120);S.acc-=1/120}}render();requestAnimationFrame(loop)};
 c.addEventListener('pointerdown',e=>{e.preventDefault();if(menuOpen)return;if(!S.start){start();return}audio();c.setPointerCapture(e.pointerId);const p=pos(e);if(inc(p.x,p.y,U.jx,U.jy,U.jr*1.2)&&I.pp===null){I.pp=e.pointerId;joy(p.x,p.y);return}if(inc(p.x,p.y,U.bx,U.by,U.br)){I.jp=e.pointerId;I.jump=true;I.jumpDown=true;return}const i=U.slots.findIndex(s=>inc(p.x,p.y,s.x,s.y,s.r));if(i>=0)pressSlot(i,e.pointerId)},{passive:false});
 c.addEventListener('pointermove',e=>{if(e.pointerId!==I.pp)return;e.preventDefault();const p=pos(e);joy(p.x,p.y)},{passive:false});
