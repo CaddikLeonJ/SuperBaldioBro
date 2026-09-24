@@ -548,6 +548,7 @@ fartFrame=function(){uniformSprite(fartImgs[fartIndex()],F.dir)};
 lightheadedFrame=function(){const elapsed=lightheadedDuration-lightheadedT;const i=elapsed<.24||lightheadedT<.24?2:Math.floor((elapsed-.24)/.40)%2;uniformSprite(lightImgs[i])};
 const cloutTransformAudioURL='https://raw.githubusercontent.com/CaddikLeonJ/SuperBaldioBro/main/'+encodeURI('Ayofatnap Super Goku.mp3');
 let cloutTransformBuffer=null,cloutTransformPromise=null,cloutTransformVoice=null;
+let cloutEnergyOsc=null,cloutEnergyGain=null,cloutEnergyNoise=null,cloutEnergyNoiseGain=null,cloutEnergyFilter=null;
 function loadCloutTransformBuffer(){
  if(cloutTransformBuffer)return Promise.resolve(cloutTransformBuffer);
  if(cloutTransformPromise)return cloutTransformPromise;
@@ -570,13 +571,44 @@ function playCloutTransformAudio(){
   src.start(ctx.currentTime+.01)
  })
 }
+function startCloutEnergyHum(){
+ if(!A.ctx||cloutEnergyOsc)return;
+ const ctx=A.ctx,t=ctx.currentTime;
+ const g=ctx.createGain(),osc=ctx.createOscillator();
+ osc.type='sawtooth';osc.frequency.setValueAtTime(78,t);
+ g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.045,t+.18);
+ osc.connect(g);g.connect(A.m);osc.start(t);
+ const n=Math.max(1,Math.floor(ctx.sampleRate*1.25)),b=ctx.createBuffer(1,n,ctx.sampleRate),d=b.getChannelData(0);
+ for(let i=0;i<n;i++)d[i]=(Math.random()*2-1)*(.55+.45*Math.sin(Math.PI*i/n));
+ const ns=ctx.createBufferSource(),f=ctx.createBiquadFilter(),ng=ctx.createGain();
+ ns.buffer=b;ns.loop=true;f.type='bandpass';f.Q.value=.75;f.frequency.setValueAtTime(430,t);
+ ng.gain.setValueAtTime(.0001,t);ng.gain.exponentialRampToValueAtTime(.020,t+.22);
+ ns.connect(f);f.connect(ng);ng.connect(A.m);ns.start(t);
+ cloutEnergyOsc=osc;cloutEnergyGain=g;cloutEnergyNoise=ns;cloutEnergyNoiseGain=ng;cloutEnergyFilter=f
+}
+function updateCloutEnergyHum(){
+ if(!A.ctx||!cloutEnergyOsc||!cloutEnergyGain)return;
+ const ctx=A.ctx,p=cl(clout.t/clout.duration,0,1),now=ctx.currentTime;
+ cloutEnergyOsc.frequency.setTargetAtTime(78+p*92+Math.sin(clout.t*4.2)*8,now,.08);
+ cloutEnergyGain.gain.setTargetAtTime(.042+p*.030,now,.10);
+ if(cloutEnergyFilter)cloutEnergyFilter.frequency.setTargetAtTime(430+p*920,now,.10);
+ if(cloutEnergyNoiseGain)cloutEnergyNoiseGain.gain.setTargetAtTime(.018+p*.022,now,.10)
+}
+function stopCloutEnergyHum(){
+ if(!A.ctx)return;
+ const ctx=A.ctx,t=ctx.currentTime,osc=cloutEnergyOsc,ns=cloutEnergyNoise,g=cloutEnergyGain,ng=cloutEnergyNoiseGain;
+ if(g){g.gain.cancelScheduledValues(t);g.gain.setTargetAtTime(.0001,t,.08)}
+ if(ng){ng.gain.cancelScheduledValues(t);ng.gain.setTargetAtTime(.0001,t,.08)}
+ try{osc?.stop(t+.32)}catch{}try{ns?.stop(t+.32)}catch{}
+ cloutEnergyOsc=null;cloutEnergyGain=null;cloutEnergyNoise=null;cloutEnergyNoiseGain=null;cloutEnergyFilter=null
+}
 function cloutPickupRect(){return{x:clout.x-18,y:fy()-34,w:36,h:28}}
 function startCloutTransform(){
  if(clout.taken||clout.transforming||clout.powered||koT>0)return;
  clout.taken=true;clout.transforming=true;clout.t=0;clout.powerT=0;clout.sfxTick=0;
  releaseAll();P.vx=0;P.vy=0;P.run=false;headActive=false;headT=0;
  if(P.ground)P.y=fy()-P.h;
- playCloutTransformAudio();
+ playCloutTransformAudio();startCloutEnergyHum();
  thump(.08);beep(190,.12,.06);beep(285,.14,.05,.08)
 }
 function cloutTransformSfx(){
@@ -590,9 +622,10 @@ function cloutTransformSfx(){
 function updateClout(dt){
  if(clout.transforming){
   clout.t=Math.min(clout.duration,clout.t+dt);P.vx=0;P.vy=0;P.run=false;I.jump=false;I.jumpDown=false;
+  updateCloutEnergyHum();
   while(clout.t>=clout.sfxTick){cloutTransformSfx();clout.sfxTick+=clout.t<6?0.72:clout.t<8.5?0.42:0.24}
   if(clout.t>=clout.duration){
-   clout.transforming=false;clout.powered=true;clout.powerT=clout.powerDuration;
+   clout.transforming=false;clout.powered=true;clout.powerT=clout.powerDuration;stopCloutEnergyHum();
    thump(.30);noise(.16,.12);beep(720,.12,.10);beep(980,.16,.08,.07);beep(1320,.20,.065,.15)
   }
   return true
@@ -756,20 +789,32 @@ function drawScaledFatNap(drawFn,sx,sy){
  const px=P.x-S.cam+P.w/2,py=P.y+P.h+(P.ground?11.5:0);
  x.save();x.translate(px,py);x.scale(sx,sy);x.translate(-px,-py);drawFn();x.restore()
 }
-function drawSilhouetteFatNap(drawFn,sx,sy){
- const px=P.x-S.cam+P.w/2,py=P.y+P.h+(P.ground?11.5:0);
- x.save();x.translate(px,py);x.scale(sx,sy);x.translate(-px,-py);
- const oldFilter=x.filter,oldAlpha=x.globalAlpha;
- x.filter='brightness(0) saturate(0)';x.globalAlpha=.97;
- drawFn();
- x.filter=oldFilter;x.globalAlpha=oldAlpha;x.restore()
+let cloutSilhouetteCanvas=null,cloutSilhouetteSource=null;
+function cloutSilhouetteImage(im){
+ if(!im||!im.complete||!im.naturalWidth)return null;
+ if(cloutSilhouetteCanvas&&cloutSilhouetteSource===im)return cloutSilhouetteCanvas;
+ const ratio=Math.min(1,760/im.naturalWidth),oc=document.createElement('canvas');
+ oc.width=Math.max(1,Math.round(im.naturalWidth*ratio));oc.height=Math.max(1,Math.round(im.naturalHeight*ratio));
+ const ox=oc.getContext('2d');ox.clearRect(0,0,oc.width,oc.height);ox.drawImage(im,0,0,oc.width,oc.height);
+ ox.globalCompositeOperation='source-in';ox.fillStyle='#111318';ox.fillRect(0,0,oc.width,oc.height);ox.globalCompositeOperation='source-over';
+ cloutSilhouetteCanvas=oc;cloutSilhouetteSource=im;return oc
+}
+function drawTransformingFatNap(sx,sy){
+ if(!idle||!idle.complete||!idle.naturalWidth){drawScaledFatNap(()=>ph(),sx,sy);return}
+ const px=P.x-S.cam+P.w/2,py=P.y+P.h+(P.ground?11.5:0),b=MOTION_BOUNDS["IDLE.png"],
+       baseScale=96/idle.naturalHeight,anchor=b?b[3]:idle.naturalHeight,drawW=idle.naturalWidth*baseScale,drawH=idle.naturalHeight*baseScale,
+       p=cl(clout.t/clout.duration,0,1),reveal=cl((p-.82)/.18,0,1),sil=cloutSilhouetteImage(idle);
+ x.save();x.translate(px,py);x.scale(sx,sy);if(P.dir<0)x.scale(-1,1);
+ if(sil&&reveal<1){x.globalAlpha=1-reveal;x.drawImage(sil,-drawW/2,-anchor*baseScale,drawW,drawH)}
+ if(reveal>0){x.globalAlpha=reveal;x.drawImage(idle,-drawW/2,-anchor*baseScale,drawW,drawH)}
+ x.restore()
 }
 const motionPlayer=player;player=function(){
  if(koT>0){koDeathFrame();return}
  if(P.inv>0&&Math.floor(S.t/.08)%2===0)return;
  const draw=()=>{if(crawling()&&crawlReady())crawlFrame();else motionPlayer()};
  const sc=cloutScale();
- if(clout.transforming){drawSilhouetteFatNap(draw,sc.x,sc.y);return}
+ if(clout.transforming){drawTransformingFatNap(sc.x,sc.y);return}
  if(clout.powered){drawScaledFatNap(draw,sc.x,sc.y);return}
  draw()
 };
