@@ -257,7 +257,7 @@ addEventListener('blur',releaseAll);document.addEventListener('visibilitychange'
 
 const MOTION_ASSET_ROOT="https://raw.githubusercontent.com/CaddikLeonJ/SuperBaldioBro/2ff154de90a9d97d1864876ad733c0eba49e8d6b/";
 // v0.3.3: separate crawl input, shared source scale, complete recovery audio.
-crawlSheet.crossOrigin="anonymous";crawlSheet.src="https://raw.githubusercontent.com/CaddikLeonJ/SuperBaldioBro/main/"+encodeURI("FAT_NAP_CRAWL_4FRAME.webp");
+crawlSheet.crossOrigin="anonymous";crawlSheet.src="https://raw.githubusercontent.com/CaddikLeonJ/SuperBaldioBro/main/"+encodeURI("FAT_NAP_CRAWL_4FRAME.png");
 const crawlReady=()=>crawlSheet.complete&&crawlSheet.naturalWidth>0;
 let crawlDistance=0,lastCrawlX=P.x;
 function crawling(){return P.ground&&P.crouch&&crouchState==='down'&&Math.abs(I.mx)>.1&&Math.abs(P.vx)>1&&lightheadedT<=0&&!F.active&&!headActive}
@@ -273,7 +273,7 @@ idleFrame=function(){uniformSprite(idle)};
 sprite=function(im){uniformSprite(im)};
 proportionalSprite=function(im){uniformSprite(im)};
 crouchFrame=function(){let i=2;if(crouchState==='downing')i=crouchT<.06?0:crouchT<.12?1:2;else if(crouchState==='uping')i=crouchT<.06?2:crouchT<.12?1:0;uniformSprite(crouchImgs[i])};
-function crawlFrame(){const rects=[[0,0,68,48],[70,0,74,48],[146,0,68,48],[216,0,90,48]],i=Math.floor(crawlDistance/10)%4,r=rects[i],targetH=33,scale=targetH/r[3],drawW=r[2]*scale;x.save();x.translate(P.x-S.cam+P.w/2,P.y+P.h+(P.ground?11.5:0));if(P.dir<0)x.scale(-1,1);x.drawImage(crawlSheet,r[0],r[1],r[2],r[3],-drawW/2,-targetH,drawW,targetH);x.restore()}
+function crawlFrame(){const rects=[[302,142,459,324],[800,170,442,289],[254,597,458,324],[758,622,528,283]],i=Math.floor(crawlDistance/10)%4,r=rects[i],cb=MOTION_BOUNDS["FAT NAP SPRITES (CHARACTER MODELS) - 33.png"],targetH=crouchImgs[2]?.naturalHeight&&cb?(cb[3]-cb[1])*(96/crouchImgs[2].naturalHeight):54,scale=targetH/r[3],drawW=r[2]*scale;x.save();x.translate(P.x-S.cam+P.w/2,P.y+P.h+(P.ground?11.5:0));if(P.dir<0)x.scale(-1,1);x.drawImage(crawlSheet,r[0],r[1],r[2],r[3],-drawW/2,-targetH,drawW,targetH);x.restore()}
 walkFrame=function(){if(walkNow())walkDistance+=Math.abs(P.x-lastWalkX);else walkDistance=0;lastWalkX=P.x;const i=Math.floor(walkDistance/12)%4;if((i===0||i===2)&&i!==lastWalkSfxFrame)footstep(false);lastWalkSfxFrame=i;uniformSprite(walkImgs[i])};
 runFrame=function(){const i=Math.floor(S.t*10)%4;if((i===0||i===2)&&i!==lastRunSfxFrame)footstep(true);lastRunSfxFrame=i;uniformSprite(runImgs[i],P.dir,.92)};
 headFrame=function(){uniformSprite(headImgs[headT<.035?0:headT<.07?1:headT<.32?2:3])};
