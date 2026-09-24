@@ -273,7 +273,7 @@ idleFrame=function(){uniformSprite(idle)};
 sprite=function(im){uniformSprite(im)};
 proportionalSprite=function(im){uniformSprite(im)};
 crouchFrame=function(){let i=2;if(crouchState==='downing')i=crouchT<.06?0:crouchT<.12?1:2;else if(crouchState==='uping')i=crouchT<.06?2:crouchT<.12?1:0;uniformSprite(crouchImgs[i])};
-function crawlFrame(){uniformSprite(crawlImgs[Math.floor(crawlDistance/10)%4],P.dir,1.4583333333333333)}
+function crawlFrame(){uniformSprite(crawlImgs[Math.floor(crawlDistance/10)%4],P.dir,1.3541666666666667)}
 walkFrame=function(){if(walkNow())walkDistance+=Math.abs(P.x-lastWalkX);else walkDistance=0;lastWalkX=P.x;const i=Math.floor(walkDistance/12)%4;if((i===0||i===2)&&i!==lastWalkSfxFrame)footstep(false);lastWalkSfxFrame=i;uniformSprite(walkImgs[i])};
 runFrame=function(){const i=Math.floor(S.t*10)%4;if((i===0||i===2)&&i!==lastRunSfxFrame)footstep(true);lastRunSfxFrame=i;uniformSprite(runImgs[i],P.dir,.92)};
 headFrame=function(){uniformSprite(headImgs[headT<.035?0:headT<.07?1:headT<.32?2:3])};
