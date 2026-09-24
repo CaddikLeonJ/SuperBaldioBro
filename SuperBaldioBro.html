@@ -8,7 +8,7 @@ let stepSfxX=P.x,airWas=false,headImpactPlayed=false,headFxT=0,headMoveFxT=0,las
 function start(){if(S.start)return;S.start=true;audio();loadLightheadedBuffer();beep(262,.08,.16);beep(392,.09,.14,.07);beep(523,.14,.12,.15)}const cl=(v,a,b)=>Math.max(a,Math.min(b,v)),mv=(v,t,m)=>v<t?Math.min(v+m,t):v>t?Math.max(v-m,t):t,fy=()=>S.stage*.8;
 let hemmergyTired=false,lightheadedT=0,gaspT=0,hemmergyIdleT=0;
 function gaspSfx(){if(!A.ctx)return;const ac=A.ctx,t=ac.currentTime,n=Math.max(1,Math.floor(ac.sampleRate*.34)),b=ac.createBuffer(1,n,ac.sampleRate),d=b.getChannelData(0);for(let i=0;i<n;i++){const e=Math.sin(Math.PI*i/n);d[i]=(Math.random()*2-1)*e}const src=ac.createBufferSource(),f=ac.createBiquadFilter(),g=ac.createGain();src.buffer=b;f.type='bandpass';f.Q.value=.65;f.frequency.setValueAtTime(520,t);f.frequency.exponentialRampToValueAtTime(1150,t+.2);g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(.16,t+.05);g.gain.exponentialRampToValueAtTime(.0001,t+.34);src.connect(f);f.connect(g);g.connect(A.m);src.start(t)}
-const lightheadedAudioURL='https://raw.githubusercontent.com/CaddikLeonJ/SuperBaldioBro/main/'+encodeURI('Fat Nap Light Headed Full.m4a');
+const lightheadedAudioURL='https://raw.githubusercontent.com/CaddikLeonJ/SuperBaldioBro/main/'+encodeURI('Ayofatnap Light Headed.mp3');
 let lightheadedBuffer=null,lightheadedBufferPromise=null;
 function loadLightheadedBuffer(){
  if(lightheadedBuffer)return Promise.resolve(lightheadedBuffer);
