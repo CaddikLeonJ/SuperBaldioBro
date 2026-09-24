@@ -257,8 +257,51 @@ addEventListener('blur',releaseAll);document.addEventListener('visibilitychange'
 
 const MOTION_ASSET_ROOT="https://raw.githubusercontent.com/CaddikLeonJ/SuperBaldioBro/2ff154de90a9d97d1864876ad733c0eba49e8d6b/";
 // v0.3.3: separate crawl input, shared source scale, complete recovery audio.
-crawlSheet.crossOrigin="anonymous";crawlSheet.src="https://raw.githubusercontent.com/CaddikLeonJ/SuperBaldioBro/main/"+encodeURI("FAT_NAP_CRAWL_4FRAME.png");
-const crawlReady=()=>crawlSheet.complete&&crawlSheet.naturalWidth>0;
+crawlSheet.onload=null;crawlOK=false;
+async function loadCrawlSheetFromZip(){
+ const zipURL="https://raw.githubusercontent.com/CaddikLeonJ/SuperBaldioBro/main/"+encodeURI("Ayofatnap Crawling Animation.zip");
+ const res=await fetch(zipURL,{cache:"no-store"});
+ if(!res.ok)throw new Error("crawl zip "+res.status);
+ const buf=await res.arrayBuffer(),dv=new DataView(buf),bytes=new Uint8Array(buf);
+ let eocd=-1;
+ for(let p=bytes.length-22;p>=Math.max(0,bytes.length-65557);p--){
+  if(dv.getUint32(p,true)===0x06054b50){eocd=p;break}
+ }
+ if(eocd<0)throw new Error("crawl zip directory");
+ const count=dv.getUint16(eocd+10,true),cdOffset=dv.getUint32(eocd+16,true),td=new TextDecoder();
+ let p=cdOffset,best=null;
+ for(let n=0;n<count;n++){
+  if(dv.getUint32(p,true)!==0x02014b50)break;
+  const method=dv.getUint16(p+10,true),compSize=dv.getUint32(p+20,true),rawSize=dv.getUint32(p+24,true),
+        nameLen=dv.getUint16(p+28,true),extraLen=dv.getUint16(p+30,true),commentLen=dv.getUint16(p+32,true),
+        localOffset=dv.getUint32(p+42,true),name=td.decode(bytes.subarray(p+46,p+46+nameLen));
+  if(/\.png$/i.test(name)&&!name.endsWith("/")&&(!best||rawSize>best.rawSize))best={method,compSize,rawSize,localOffset,name};
+  p+=46+nameLen+extraLen+commentLen;
+ }
+ if(!best)throw new Error("no PNG in crawl zip");
+ const lp=best.localOffset;
+ if(dv.getUint32(lp,true)!==0x04034b50)throw new Error("crawl zip local header");
+ const localNameLen=dv.getUint16(lp+26,true),localExtraLen=dv.getUint16(lp+28,true),start=lp+30+localNameLen+localExtraLen;
+ const packed=bytes.slice(start,start+best.compSize);
+ let raw;
+ if(best.method===0)raw=packed;
+ else if(best.method===8){
+  const stream=new Blob([packed]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+  raw=new Uint8Array(await new Response(stream).arrayBuffer());
+ }else throw new Error("unsupported crawl zip method "+best.method);
+ const url=URL.createObjectURL(new Blob([raw],{type:"image/png"}));
+ await new Promise((resolve,reject)=>{
+  crawlSheet.onload=()=>{crawlOK=true;URL.revokeObjectURL(url);resolve()};
+  crawlSheet.onerror=()=>{URL.revokeObjectURL(url);reject(new Error("crawl PNG decode"))};
+  crawlSheet.src=url;
+ });
+}
+loadCrawlSheetFromZip().catch(()=>{
+ crawlSheet.crossOrigin="anonymous";
+ crawlSheet.onload=()=>crawlOK=true;
+ crawlSheet.src="https://raw.githubusercontent.com/CaddikLeonJ/SuperBaldioBro/main/"+encodeURI("FAT_NAP_CRAWL_4FRAME.png");
+});
+const crawlReady=()=>crawlOK&&crawlSheet.complete&&crawlSheet.naturalWidth>0;
 let crawlDistance=0,lastCrawlX=P.x;
 function crawling(){return P.ground&&P.crouch&&crouchState==='down'&&Math.abs(I.mx)>.1&&Math.abs(P.vx)>1&&lightheadedT<=0&&!F.active&&!headActive}
 const MOTION_BOUNDS={"FAT NAP SPRITES (CHARACTER MODELS) - 37.png": [761, 55, 2243, 1349], "FAT NAP SPRITES (CHARACTER MODELS) - 46.png": [825, 1289, 2172, 2197], "FAT NAP SPRITES (CHARACTER MODELS) - 32.png": [1060, 474, 1944, 2197], "FAT NAP SPRITES (CHARACTER MODELS) - 23.png": [533, 460, 2467, 2196], "FAT NAP SPRITES (CHARACTER MODELS) - 45.png": [791, 1295, 2211, 2197], "FAT NAP SPRITES (CHARACTER MODELS) - 29.png": [859, 293, 2138, 2197], "FAT NAP SPRITES (CHARACTER MODELS) - 33.png": [1019, 946, 1989, 2197], "FAT NAP SPRITES (CHARACTER MODELS) - 44.png": [867, 1305, 2136, 2196], "FAT NAP SPRITES (CHARACTER MODELS) - 27.png": [1064, 54, 1931, 2197], "FAT NAP SPRITES (CHARACTER MODELS) - 6.png": [731, 53, 2266, 2200], "FAT NAP SPRITES (CHARACTER MODELS) - 16.png": [789, 54, 2210, 2194], "FAT NAP SPRITES (CHARACTER MODELS) - 41.png": [996, 463, 2017, 2191], "FAT NAP SPRITES (CHARACTER MODELS) - 5.png": [1180, 51, 1826, 2197], "FAT NAP SPRITES (CHARACTER MODELS) - 26.png": [1074, 54, 1924, 2197], "FAT NAP SPRITES (CHARACTER MODELS) - 13.png": [639, 51, 2403, 2196], "FAT NAP SPRITES (CHARACTER MODELS) - 40.png": [982, 373, 2024, 2197], "FAT NAP SPRITES (CHARACTER MODELS) - 28.png": [966, 76, 2194, 2194], "FAT NAP SPRITES (CHARACTER MODELS) - 22.png": [741, 220, 2265, 2193], "FAT NAP SPRITES (CHARACTER MODELS) - 35.png": [937, 943, 2071, 2194], "FAT NAP SPRITES (CHARACTER MODELS) - 21.png": [974, 53, 2022, 2192], "FAT NAP SPRITES (CHARACTER MODELS) - 31.png": [1124, 54, 1877, 2198], "FAT NAP SPRITES (CHARACTER MODELS) - 36.png": [949, 382, 2050, 1971], "IDLE.png": [1097, 53, 1909, 2196], "FAT NAP SPRITES (CHARACTER MODELS) - 47.png": [802, 1324, 2237, 2194], "FAT NAP SPRITES (CHARACTER MODELS) - 42.png": [1118, 69, 1879, 2204], "FAT NAP SPRITES (CHARACTER MODELS) - 4.png": [734, 51, 2263, 2196], "FAT NAP SPRITES (CHARACTER MODELS) - 7.png": [1170, 51, 1831, 2198], "FAT NAP SPRITES (CHARACTER MODELS) - 15.png": [491, 53, 2504, 2194], "FAT NAP SPRITES (CHARACTER MODELS).png": [1097, 23, 1909, 2196], "FAT NAP SPRITES (CHARACTER MODELS) - 24.png": [967, 61, 2034, 2197], "FAT NAP SPRITES (CHARACTER MODELS) - 14.png": [793, 53, 2209, 2195]};
