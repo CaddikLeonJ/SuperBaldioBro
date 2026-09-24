@@ -266,7 +266,7 @@ function uniformSprite(im,dir=P.dir,size=1){
  if(!im||!im.complete||!im.naturalWidth)return ph();
  const file=decodeURIComponent(im.src.split('/').pop().split('?')[0]),b=MOTION_BOUNDS[file];
  const scale=96*size/im.naturalHeight,anchor=b?b[3]:im.naturalHeight;
- x.save();x.translate(P.x-S.cam+P.w/2,P.y+P.h);if(dir<0)x.scale(-1,1);
+ x.save();x.translate(P.x-S.cam+P.w/2,P.y+P.h+(P.ground?11.5:0));if(dir<0)x.scale(-1,1);
  x.drawImage(im,-im.naturalWidth*scale/2,-anchor*scale,im.naturalWidth*scale,im.naturalHeight*scale);x.restore();
 }
 idleFrame=function(){uniformSprite(idle)};
