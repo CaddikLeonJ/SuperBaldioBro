@@ -455,7 +455,7 @@ function koFx(){
 }
 function lightheadedFx(){if(lightheadedT<=0)return;const elapsed=lightheadedDuration-lightheadedT,frameHold=.40,px=P.x-S.cam+P.w/2,baseY=P.y+P.h+11.5,mouthX=px+P.dir*18,mouthY=baseY-61;let frameIndex,frameProgress=0;if(elapsed<.24||lightheadedT<.24)frameIndex=2;else{const mid=elapsed-.24;frameIndex=Math.floor(mid/frameHold)%2;frameProgress=(mid%frameHold)/frameHold}x.save();if(frameIndex===0){const p=frameProgress;for(let i=0;i<3;i++){const q=cl(p-i*.12,0,1);if(q<=0)continue;const bx=mouthX+P.dir*(5+q*(19+i*5)),by=mouthY-2-q*(5+i*2),r=2.7+i*1.3+q*2.5;x.globalAlpha=(1-q)*.58;x.fillStyle='#f3f7ff';x.beginPath();x.arc(bx,by,r,0,Math.PI*2);x.arc(bx-P.dir*r*.7,by+1,r*.72,0,Math.PI*2);x.fill()}}x.restore()}
 hud=function(){x.fillStyle='rgba(7,9,16,.8)';x.fillRect(0,0,S.w,30);x.fillStyle='#fff';x.font='bold 12px Arial';x.textAlign='left';x.textBaseline='alphabetic';x.fillText('SUPER BALDIO BROS. · v'+VERSION,10,20);const bw=(S.w-28)/2,bh=13,hx=10,sx=18+bw,jumpTop=U.by-U.br,labelY=jumpTop-52,by=jumpTop-47;x.font='bold 9px Arial';x.fillStyle='#fff';x.fillText('ELF BAR  '+P.hp+'/'+P.maxHp,hx,labelY);x.fillText(lightheadedT>0?'HEMMERGY BAR  LIGHT-HEADED':'HEMMERGY BAR  '+Math.ceil(P.hemmergy)+'%',sx,labelY);x.fillStyle='#181b23';x.fillRect(hx,by,bw,bh);x.fillRect(sx,by,bw,bh);x.fillStyle='#d83b3f';x.fillRect(hx,by,bw*cl(P.hp/P.maxHp,0,1),bh);x.fillStyle='#f1cf3a';x.fillRect(sx,by,bw*cl(P.hemmergy/P.maxHemmergy,0,1),bh);x.strokeStyle='#626b7d';x.lineWidth=1;x.strokeRect(hx+.5,by+.5,bw-1,bh-1);x.strokeRect(sx+.5,by+.5,bw-1,bh-1);if(noticeUntil>S.t){x.fillStyle='#162539';x.fillRect(8,88,S.w-16,34);x.fillStyle='#fff';x.font='12px Arial';x.fillText(notice,16,110)}};
-render=function(){x.setTransform(S.d,0,0,S.d,0,0);x.fillStyle='#070910';x.fillRect(0,0,S.w,S.h);room();drawCloutPickup();drawSquirrel();drawCloutFx();player();drawGas();drawSquirrelFx();headAura();headMoveFx();headFx();if(koT<=0)lightheadedFx();koFx();controls();hud();overlay();menuButton.hidden=menuOpen||!S.start};
+render=function(){x.setTransform(S.d,0,0,S.d,0,0);x.fillStyle='#070910';x.fillRect(0,0,S.w,S.h);room();drawCloutPickup();drawSquirrel();drawCloutFx();player();drawCloutFrontFx();drawGas();drawSquirrelFx();headAura();headMoveFx();headFx();if(koT<=0)lightheadedFx();koFx();controls();hud();overlay();menuButton.hidden=menuOpen||!S.start};
 loop=function(t){const dt=Math.min((t-S.last)/1000,.033);S.last=t;if(!menuOpen&&!document.hidden){S.t+=dt;S.acc+=dt;while(S.acc>=1/120){if(S.start)step(1/120);S.acc-=1/120}}render();requestAnimationFrame(loop)};
 c.addEventListener('pointerdown',e=>{e.preventDefault();if(menuOpen)return;if(!S.start){start();return}audio();c.setPointerCapture(e.pointerId);const p=pos(e);if(inc(p.x,p.y,U.jx,U.jy,U.jr*1.2)&&I.pp===null){I.pp=e.pointerId;joy(p.x,p.y);return}if(inc(p.x,p.y,U.bx,U.by,U.br)){I.jp=e.pointerId;I.jump=true;I.jumpDown=true;return}const i=U.slots.findIndex(s=>inc(p.x,p.y,s.x,s.y,s.r));if(i>=0)pressSlot(i,e.pointerId)},{passive:false});
 c.addEventListener('pointermove',e=>{if(e.pointerId!==I.pp)return;e.preventDefault();const p=pos(e);joy(p.x,p.y)},{passive:false});
@@ -625,69 +625,152 @@ function drawCloutPickup(){
 }
 function cloutScale(){
  if(clout.transforming){
-  const p=cl(clout.t/clout.duration,0,1),build=cl((p-.12)/.88,0,1),ease=build*build*(3-2*build),pulse=Math.sin(clout.t*20)*(1-p)*.018;
-  return{x:1+ease*.22+pulse,y:1+ease*.34+pulse*.55}
+  const p=cl(clout.t/clout.duration,0,1),t=clout.t,build=cl((p-.08)/.92,0,1),ease=build*build*(3-2*build);
+  const surge=
+   Math.exp(-Math.pow((t-2.15)/.20,2))*.030+
+   Math.exp(-Math.pow((t-4.55)/.22,2))*.042+
+   Math.exp(-Math.pow((t-6.85)/.24,2))*.055+
+   Math.exp(-Math.pow((t-8.65)/.20,2))*.070+
+   Math.exp(-Math.pow((t-9.55)/.14,2))*.045;
+  const tremble=Math.sin(t*22)*(1-p)*.009;
+  return{x:1+ease*.22+surge+tremble,y:1+ease*.34+surge*1.35+tremble*.55}
  }
  return clout.powered?{x:1.22,y:1.34}:{x:1,y:1}
 }
+function cloutAuraFade(){
+ if(clout.transforming)return 1;
+ if(!clout.powered)return 0;
+ const elapsed=clout.powerDuration-clout.powerT;
+ return cl(1-elapsed/2.65,0,1)
+}
+function flamePath(w,h,phase=0){
+ x.beginPath();
+ x.moveTo(0,8);
+ x.bezierCurveTo(w*.70,-h*.03,w*1.03,-h*.25,w*.72,-h*.42);
+ x.bezierCurveTo(w*.96,-h*.53,w*.70,-h*.74,w*.43,-h*.69);
+ x.bezierCurveTo(w*.60,-h*.83,w*.26,-h*.96,0,-h);
+ x.bezierCurveTo(-w*.26,-h*.96,-w*.60,-h*.83,-w*.43,-h*.69);
+ x.bezierCurveTo(-w*.70,-h*.74,-w*.96,-h*.53,-w*.72,-h*.42);
+ x.bezierCurveTo(-w*1.03,-h*.25,-w*.70,-h*.03,0,8);
+ x.closePath()
+}
 function drawCloutFx(){
- if(!clout.transforming&&!clout.powered)return;
+ const fade=cloutAuraFade();
+ if(fade<=0)return;
  const transforming=clout.transforming,p=transforming?cl(clout.t/clout.duration,0,1):1,px=P.x-S.cam+P.w/2,base=fy()+11.5;
- const powerFade=clout.powered&&clout.powerT<3?clout.powerT/3:1;
+ const sc=cloutScale(),growth=(sc.y-1)/.34;
  x.save();x.translate(px,base);
 
- // Large flickering energy aura behind Fat Nap.
- const auraPulse=.92+Math.sin(S.t*17)*.06+(transforming?Math.sin(clout.t*7)*.04:0);
- const auraH=(transforming?82+78*p:150)*auraPulse,auraW=(transforming?25+26*p:50)*auraPulse;
- x.globalAlpha=(transforming?.20+.28*p:.28)*powerFade;
- const ag=x.createRadialGradient(0,-auraH*.42,6,0,-auraH*.42,auraH*.72);
- ag.addColorStop(0,'rgba(255,255,255,.92)');ag.addColorStop(.35,'rgba(255,239,115,.72)');ag.addColorStop(.72,'rgba(107,192,255,.42)');ag.addColorStop(1,'rgba(75,134,255,0)');
- x.fillStyle=ag;x.beginPath();x.ellipse(0,-auraH*.45,auraW,auraH*.60,0,0,Math.PI*2);x.fill();
+ // Flame-shaped energy shell behind the silhouette/body.
+ const flicker=.96+Math.sin(S.t*19)*.045+Math.sin(S.t*31)*.025;
+ const h=(104+70*growth)*flicker,w=(35+22*growth)*flicker;
+ x.globalAlpha=(transforming?.60:.50*fade);
+ const outer=x.createRadialGradient(0,-h*.48,8,0,-h*.48,h*.78);
+ outer.addColorStop(0,'rgba(255,255,255,.96)');
+ outer.addColorStop(.22,'rgba(255,246,170,.88)');
+ outer.addColorStop(.52,'rgba(255,198,76,.68)');
+ outer.addColorStop(.76,'rgba(110,198,255,.48)');
+ outer.addColorStop(1,'rgba(65,125,255,0)');
+ x.fillStyle=outer;flamePath(w,h);x.fill();
 
- // Rising energy streaks / evolution beams.
- const streaks=transforming?14:8;
- x.globalAlpha=(transforming?.42+.35*p:.30)*powerFade;x.lineWidth=2;
+ // Layered inner flames make it read as a flame aura rather than a plain oval.
+ const layers=4;
+ for(let i=0;i<layers;i++){
+  const q=i/(layers-1),lh=h*(.90-q*.16),lw=w*(.86-q*.14),wiggle=Math.sin(S.t*(15+i*3)+i)*3;
+  x.globalAlpha=(transforming?(.20+.12*(1-q)):(.18+.08*(1-q))*fade);
+  x.fillStyle=i%2===0?'rgba(255,244,150,.72)':'rgba(174,225,255,.55)';
+  x.save();x.translate(wiggle*(1-q),0);flamePath(lw,lh,S.t+i);x.fill();x.restore()
+ }
+
+ // Fast rising power streaks.
+ x.lineWidth=2;
+ const streaks=transforming?16:10;
  for(let i=0;i<streaks;i++){
-  const phase=(S.t*(transforming?120:75)+i*37)%150,q=phase/150,side=(i%2?1:-1)*(16+(i%5)*7);
-  x.strokeStyle=i%3===0?'#ffffff':i%3===1?'#fff09a':'#9ed8ff';
-  x.beginPath();x.moveTo(side,-5-q*20);x.lineTo(side*(.55+.35*q),-40-q*(70+55*p));x.stroke()
+  const q=((S.t*(transforming?1.9:1.25)+i*.173)%1),side=(i%2?1:-1)*(16+(i%5)*7);
+  x.globalAlpha=(1-q)*(transforming?.62:.34*fade);
+  x.strokeStyle=i%3===0?'#ffffff':i%3===1?'#ffe57c':'#9edbff';
+  x.beginPath();x.moveTo(side,-8-q*20);x.lineTo(side*.55,-44-q*(78+28*growth));x.stroke()
  }
 
- // Expanding evolution rings.
- const rings=transforming?4:2;
- for(let i=0;i<rings;i++){
-  const rp=(S.t*(transforming?1.25:.75)+i/rings)%1;
-  x.globalAlpha=(1-rp)*(transforming?.44:.18)*powerFade;
-  x.strokeStyle=i%2?'#ffffff':'#ffe56f';x.lineWidth=2.5-rp;
-  x.beginPath();x.ellipse(0,-47-rp*25,18+rp*(28+18*p),10+rp*(12+10*p),0,0,Math.PI*2);x.stroke()
+ // Evolution-style rings.
+ for(let i=0;i<4;i++){
+  const rp=(S.t*(transforming?1.22:.70)+i*.25)%1;
+  x.globalAlpha=(1-rp)*(transforming?.48:.22*fade);
+  x.strokeStyle=i%2?'#ffffff':'#ffe66d';x.lineWidth=2.6-rp*1.4;
+  x.beginPath();x.ellipse(0,-42-rp*34,20+rp*(30+12*growth),9+rp*16,0,0,Math.PI*2);x.stroke()
  }
 
- // Orbiting sparks become denser as the transformation builds.
- const sparks=transforming?Math.floor(8+18*p):10;
- x.fillStyle='#fff7bb';
+ // Dense energy sparks.
+ const sparks=transforming?Math.floor(14+22*p):10;
+ x.fillStyle='#fff8c9';
  for(let i=0;i<sparks;i++){
-  const a=S.t*(3.5+(i%4)*.22)+i*2.399,r=24+(i%6)*5+(transforming?p*12:8),sy=-48+Math.sin(a*1.7+i)*42;
-  x.globalAlpha=(.25+.65*Math.abs(Math.sin(a+i)))*powerFade;
-  x.beginPath();x.arc(Math.cos(a)*r,sy,1.4+(i%3)*.8,0,Math.PI*2);x.fill()
+  const a=S.t*(3.3+(i%5)*.18)+i*2.399,r=26+(i%6)*5+growth*11,sy=-48+Math.sin(a*1.8+i)*46;
+  x.globalAlpha=(.28+.68*Math.abs(Math.sin(a+i)))*(transforming?1:fade);
+  x.beginPath();x.arc(Math.cos(a)*r,sy,1.3+(i%3)*.8,0,Math.PI*2);x.fill()
  }
 
- // Strong white evolution flashes in the final third of the 10-second sequence.
- if(transforming&&p>.68){
-  const finalP=(p-.68)/.32,flash=Math.max(0,Math.sin(clout.t*9))*finalP;
-  x.globalAlpha=.22*flash;x.fillStyle='#fff';x.fillRect(-S.w,-S.h,S.w*2,S.h*2)
+ // Power-surge shock rings line up with the body-growth pulses.
+ if(transforming){
+  const times=[2.15,4.55,6.85,8.65,9.55];
+  for(let i=0;i<times.length;i++){
+   const age=clout.t-times[i];
+   if(age>=0&&age<.42){
+    const q=age/.42;
+    x.globalAlpha=(1-q)*.78;x.strokeStyle=i%2?'#9edbff':'#fff4a3';x.lineWidth=4*(1-q)+1;
+    x.beginPath();x.ellipse(0,-55,24+q*75,46+q*72,0,0,Math.PI*2);x.stroke()
+   }
+  }
  }
+
+ // Bright finishing flashes.
+ if(transforming&&p>.70){
+  const fp=(p-.70)/.30,flash=Math.max(0,Math.sin(clout.t*10.5))*fp;
+  x.globalAlpha=.20*flash;x.fillStyle='#fff';x.fillRect(-S.w,-S.h,S.w*2,S.h*2)
+ }
+ x.restore()
+}
+function drawCloutFrontFx(){
+ const fade=cloutAuraFade();
+ if(fade<=0)return;
+ const transforming=clout.transforming,px=P.x-S.cam+P.w/2,base=fy()+11.5,sc=cloutScale(),growth=(sc.y-1)/.34;
+ x.save();x.translate(px,base);
+
+ // Foreground flame tongues partly cover the silhouette/body, placing him inside the aura.
+ const tongues=transforming?9:6;
+ for(let i=0;i<tongues;i++){
+  const a=i/(tongues-1),side=(a-.5)*(70+growth*28),wave=Math.sin(S.t*(13+i*.7)+i*1.7);
+  const th=30+(i%4)*10+growth*22+wave*6,tw=8+(i%3)*3;
+  x.globalAlpha=(transforming?.22+.20*Math.abs(wave):.14*fade);
+  x.fillStyle=i%3===0?'rgba(255,255,255,.78)':i%3===1?'rgba(255,225,105,.72)':'rgba(126,205,255,.55)';
+  x.beginPath();x.moveTo(side,4);x.quadraticCurveTo(side+tw*1.5,-th*.42,side+wave*tw,-th);x.quadraticCurveTo(side-tw*1.4,-th*.45,side,4);x.fill()
+ }
+
+ // Thin white shimmer around the front edge.
+ x.globalAlpha=(transforming?.24:.12*fade);
+ x.strokeStyle='#fff';x.lineWidth=1.5;
+ const h=100+growth*72,w=34+growth*21;
+ flamePath(w,h);x.stroke();
  x.restore()
 }
 function drawScaledFatNap(drawFn,sx,sy){
  const px=P.x-S.cam+P.w/2,py=P.y+P.h+(P.ground?11.5:0);
  x.save();x.translate(px,py);x.scale(sx,sy);x.translate(-px,-py);drawFn();x.restore()
 }
+function drawSilhouetteFatNap(drawFn,sx,sy){
+ const px=P.x-S.cam+P.w/2,py=P.y+P.h+(P.ground?11.5:0);
+ x.save();x.translate(px,py);x.scale(sx,sy);x.translate(-px,-py);
+ const oldFilter=x.filter,oldAlpha=x.globalAlpha;
+ x.filter='brightness(0) saturate(0)';x.globalAlpha=.97;
+ drawFn();
+ x.filter=oldFilter;x.globalAlpha=oldAlpha;x.restore()
+}
 const motionPlayer=player;player=function(){
  if(koT>0){koDeathFrame();return}
  if(P.inv>0&&Math.floor(S.t/.08)%2===0)return;
  const draw=()=>{if(crawling()&&crawlReady())crawlFrame();else motionPlayer()};
  const sc=cloutScale();
- if(clout.transforming||clout.powered){drawScaledFatNap(draw,sc.x,sc.y);return}
+ if(clout.transforming){drawSilhouetteFatNap(draw,sc.x,sc.y);return}
+ if(clout.powered){drawScaledFatNap(draw,sc.x,sc.y);return}
  draw()
 };
 const motionStep=step;step=function(dt){
