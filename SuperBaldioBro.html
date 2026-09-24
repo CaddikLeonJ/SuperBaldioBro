@@ -70,12 +70,13 @@ const fartReady=()=>fartImgs.every(im=>im.complete&&im.naturalWidth>0);
 const squirrelActionSheet=new Image(),squirrelWalkSheet=new Image(),squirrelModelSheet=new Image();
 let squirrelAssetsReady=false;
 const SQUIRREL_ACTION_RECTS={
- idle:[190,181,455,611],jump:[2245,136,633,536],crouch:[132,912,558,487],
- claw:[721,870,659,535],bite:[1518,921,651,482],pounce:[2150,856,791,468],
- tail:[138,1514,598,538],stunned:[1524,1582,566,476],defeated:[2150,1667,801,378]
+ idle:[202,201,428,576],jump:[2255,154,611,501],crouch:[142,923,532,461],
+ claw:[733,882,631,508],bite:[1528,930,627,458],pounce:[2160,865,768,443],
+ tail:[148,1538,576,502],stunned:[1534,1592,541,456],defeated:[2159,1677,775,352]
 };
-const SQUIRREL_WALK_RECTS=[[127,383,1370,1387],[1532,382,1338,1404]];
-const squirrel={x:520,w:46,h:56,hp:100,maxHp:100,dir:-1,state:'idle',stateT:0,stateDur:.75,
+const SQUIRREL_WALK_RECTS=[[136,392,1286,1355],[1544,392,1252,1362]];
+const SQUIRREL_DRAW_HEIGHTS={idle:180,walk1:170,walk2:170,jump:165,crouch:132,claw:160,bite:150,pounce:138,tail:158,stunned:145,defeated:96};
+const squirrel={x:520,w:92,h:108,hp:100,maxHp:100,dir:-1,state:'idle',stateT:0,stateDur:.75,
  attackCooldown:.8,attackCycle:0,air:0,vy:0,vx:0,flash:0,attackDone:false};
 async function loadSquirrelAssetsFromZip(){
  const url="https://raw.githubusercontent.com/CaddikLeonJ/SuperBaldioBro/main/"+encodeURI("Ayofatnap Squirrel.zip");
@@ -112,7 +113,7 @@ async function loadSquirrelAssetsFromZip(){
 }
 loadSquirrelAssetsFromZip().catch(()=>{squirrelAssetsReady=false});
 function say(message){notice=message;noticeUntil=S.t+3}
-function resetSquirrel(){gas.length=0;squirrelFx.length=0;Object.assign(squirrel,{x:520,w:46,h:56,hp:100,maxHp:100,dir:-1,state:'idle',stateT:0,stateDur:.75,attackCooldown:.8,attackCycle:0,air:0,vy:0,vx:0,flash:0,attackDone:false})}
+function resetSquirrel(){gas.length=0;squirrelFx.length=0;Object.assign(squirrel,{x:520,w:92,h:108,hp:100,maxHp:100,dir:-1,state:'idle',stateT:0,stateDur:.75,attackCooldown:.8,attackCycle:0,air:0,vy:0,vx:0,flash:0,attackDone:false})}
 resetSquirrel();
 function saveMoves(){try{localStorage.setItem('fatnap.moves.v1',JSON.stringify(slots))}catch{say('Loadout saved for this session')}}
 const menu=document.createElement('div');menu.id='move-menu';menu.hidden=true;menu.innerHTML=`<section role="dialog" aria-modal="true" aria-labelledby="move-title"><h1 id="move-title">Your moves</h1><p>Choose a slot, then choose a move.</p><div id="slot-list"></div><div id="move-list"></div><p class="hint">All moves unlocked for testing. More moves will appear here as they are added.</p><button id="reset-squirrel">Reset squirrel</button><button id="resume-game">Back to game</button></section>`;document.body.append(menu);
@@ -314,6 +315,7 @@ function squirrelChooseAttack(){
 }
 function updateSquirrel(dt){
  squirrel.flash=Math.max(0,squirrel.flash-dt);squirrel.attackCooldown=Math.max(0,squirrel.attackCooldown-dt);squirrel.stateT+=dt;
+ if(squirrel.state!=='jump'&&squirrel.state!=='pounce'){squirrel.air=0;squirrel.vy=0}
  if(squirrel.hp<=0)return;
  const pc=P.x+P.w/2,sc=squirrel.x+squirrel.w/2,dx=pc-sc,adx=Math.abs(dx);
  if(squirrel.state==='jump'||squirrel.state==='pounce'){
@@ -363,24 +365,30 @@ function updateAttacks(dt){
 }
 function updateSquirrelFx(dt){for(let i=squirrelFx.length-1;i>=0;i--){const f=squirrelFx[i];f.age+=dt;if(f.age>=f.life)squirrelFx.splice(i,1)}}
 function drawGas(){for(const p of gas){const a=(1-p.age/p.life)*.42,px=p.x-S.cam;x.save();x.globalAlpha=a;const g=x.createRadialGradient(px,p.y,0,px,p.y,p.r);g.addColorStop(0,'#aecb41');g.addColorStop(.55,'#739839');g.addColorStop(1,'rgba(80,122,38,0)');x.fillStyle=g;x.beginPath();x.arc(px,p.y,p.r,0,Math.PI*2);x.fill();x.restore()}}
-function drawSquirrelSprite(img,r,scale){
+function drawSquirrelSprite(img,r,targetH){
  if(!img||!img.complete||!img.naturalWidth)return false;
- const baseline=fy()+squirrel.air+2,drawW=r[2]*scale,drawH=r[3]*scale,px=squirrel.x+squirrel.w/2-S.cam;
+ const scale=targetH/r[3],drawW=r[2]*scale,baseline=fy()+11.5+squirrel.air,px=squirrel.x+squirrel.w/2-S.cam;
  x.save();x.translate(px,baseline);if(squirrel.dir<0)x.scale(-1,1);if(squirrel.flash>0)x.globalAlpha=.58;
- x.drawImage(img,r[0],r[1],r[2],r[3],-drawW/2,-drawH,drawW,drawH);x.restore();return true
+ x.drawImage(img,r[0],r[1],r[2],r[3],-drawW/2,-targetH,drawW,targetH);x.restore();return true
 }
 function drawSquirrel(){
- const px=squirrel.x+squirrel.w/2-S.cam;if(px<-110||px>S.w+110)return;
- let drawn=false;
+ const px=squirrel.x+squirrel.w/2-S.cam;if(px<-260||px>S.w+260)return;
+ let drawn=false,frameH=SQUIRREL_DRAW_HEIGHTS.idle;
  if(squirrelAssetsReady){
-  if(squirrel.state==='walk'){const i=Math.floor(squirrel.stateT/.16)%2;drawn=drawSquirrelSprite(squirrelWalkSheet,SQUIRREL_WALK_RECTS[i],46/1387)}
-  else{const key=squirrel.state==='claw'?'claw':squirrel.state==='bite'?'bite':squirrel.state==='tail'?'tail':squirrel.state;
-       const r=SQUIRREL_ACTION_RECTS[key]||SQUIRREL_ACTION_RECTS.idle;drawn=drawSquirrelSprite(squirrelActionSheet,r,58/611)}
+  if(squirrel.state==='walk'){
+   const i=Math.floor(squirrel.stateT/.18)%2,key=i===0?'walk1':'walk2';frameH=SQUIRREL_DRAW_HEIGHTS[key];
+   drawn=drawSquirrelSprite(squirrelWalkSheet,SQUIRREL_WALK_RECTS[i],frameH)
+  }else{
+   const key=squirrel.state==='claw'?'claw':squirrel.state==='bite'?'bite':squirrel.state==='tail'?'tail':
+             squirrel.state==='jump'?'jump':squirrel.state==='pounce'?'pounce':squirrel.state==='crouch'?'crouch':
+             squirrel.state==='stunned'?'stunned':squirrel.state==='defeated'?'defeated':'idle';
+   frameH=SQUIRREL_DRAW_HEIGHTS[key];drawn=drawSquirrelSprite(squirrelActionSheet,SQUIRREL_ACTION_RECTS[key],frameH)
+  }
  }
- if(!drawn){x.save();x.fillStyle='#a96538';x.beginPath();x.arc(px,fy()-28+squirrel.air,18,0,Math.PI*2);x.fill();x.restore()}
- const barY=fy()+squirrel.air-70;
- x.save();x.globalAlpha=squirrel.hp>0?1:.65;x.fillStyle='#202733';x.fillRect(px-25,barY,50,5);x.fillStyle=squirrel.hp>0?'#d85a43':'#6d7078';x.fillRect(px-25,barY,50*cl(squirrel.hp/squirrel.maxHp,0,1),5);x.strokeStyle='#10151c';x.strokeRect(px-25+.5,barY+.5,49,4);x.restore();
- if(squirrel.state==='stunned'&&squirrel.hp>0){x.save();x.fillStyle='#ffe46a';for(let i=0;i<3;i++){const a=S.t*6+i*Math.PI*2/3;x.font='12px Arial';x.fillText('★',px+Math.cos(a)*18,barY-8+Math.sin(a)*5)}x.restore()}
+ if(!drawn){frameH=150;x.save();x.fillStyle='#a96538';x.beginPath();x.arc(px,fy()+11.5-58+squirrel.air,42,0,Math.PI*2);x.fill();x.restore()}
+ const barY=fy()+11.5+squirrel.air-frameH-13;
+ x.save();x.globalAlpha=squirrel.hp>0?1:.65;x.fillStyle='#202733';x.fillRect(px-42,barY,84,7);x.fillStyle=squirrel.hp>0?'#d85a43':'#6d7078';x.fillRect(px-42,barY,84*cl(squirrel.hp/squirrel.maxHp,0,1),7);x.strokeStyle='#10151c';x.strokeRect(px-42+.5,barY+.5,83,6);x.restore();
+ if(squirrel.state==='stunned'&&squirrel.hp>0){x.save();x.fillStyle='#ffe46a';x.font='15px Arial';x.textAlign='center';for(let i=0;i<3;i++){const a=S.t*6+i*Math.PI*2/3;x.fillText('★',px+Math.cos(a)*28,barY-10+Math.sin(a)*7)}x.restore()}
 }
 function drawSquirrelFx(){
  for(const f of squirrelFx){const p=f.age/f.life,a=1-p,px=f.x-S.cam,py=f.y;x.save();x.globalAlpha=a;x.translate(px,py);if(f.dir<0)x.scale(-1,1);
