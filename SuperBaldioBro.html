@@ -77,7 +77,7 @@ const SQUIRREL_ACTION_RECTS={
 const SQUIRREL_WALK_RECTS=[[136,392,1286,1355],[1544,392,1252,1362]];
 const SQUIRREL_DRAW_HEIGHTS={idle:180,walk1:170,walk2:170,jump:165,crouch:132,claw:160,bite:150,pounce:138,tail:158,stunned:145,defeated:96};
 const squirrel={x:520,w:92,h:108,hp:100,maxHp:100,dir:-1,state:'idle',stateT:0,stateDur:.75,
- attackCooldown:.8,attackCycle:0,air:0,vy:0,vx:0,flash:0,attackDone:false};
+ attackCooldown:.8,attackCycle:0,air:0,vy:0,vx:0,flash:0,attackDone:false,effectDone:false};
 async function loadSquirrelAssetsFromZip(){
  const url="https://raw.githubusercontent.com/CaddikLeonJ/SuperBaldioBro/main/"+encodeURI("Ayofatnap Squirrel.zip");
  const res=await fetch(url,{cache:"no-store"});if(!res.ok)throw new Error("squirrel zip "+res.status);
@@ -113,7 +113,7 @@ async function loadSquirrelAssetsFromZip(){
 }
 loadSquirrelAssetsFromZip().catch(()=>{squirrelAssetsReady=false});
 function say(message){notice=message;noticeUntil=S.t+3}
-function resetSquirrel(){gas.length=0;squirrelFx.length=0;Object.assign(squirrel,{x:520,w:92,h:108,hp:100,maxHp:100,dir:-1,state:'idle',stateT:0,stateDur:.75,attackCooldown:.8,attackCycle:0,air:0,vy:0,vx:0,flash:0,attackDone:false})}
+function resetSquirrel(){gas.length=0;squirrelFx.length=0;Object.assign(squirrel,{x:520,w:92,h:108,hp:100,maxHp:100,dir:-1,state:'idle',stateT:0,stateDur:.75,attackCooldown:.8,attackCycle:0,air:0,vy:0,vx:0,flash:0,attackDone:false,effectDone:false})}
 resetSquirrel();
 function saveMoves(){try{localStorage.setItem('fatnap.moves.v1',JSON.stringify(slots))}catch{say('Loadout saved for this session')}}
 const menu=document.createElement('div');menu.id='move-menu';menu.hidden=true;menu.innerHTML=`<section role="dialog" aria-modal="true" aria-labelledby="move-title"><h1 id="move-title">Your moves</h1><p>Choose a slot, then choose a move.</p><div id="slot-list"></div><div id="move-list"></div><p class="hint">All moves unlocked for testing. More moves will appear here as they are added.</p><button id="reset-squirrel">Reset squirrel</button><button id="resume-game">Back to game</button></section>`;document.body.append(menu);
@@ -286,7 +286,7 @@ function squirrelSfx(type){
  else if(type==='defeated'){thump(.1);noise(.08,.045)}
 }
 function setSquirrelState(state,dur=0){
- squirrel.state=state;squirrel.stateT=0;squirrel.stateDur=dur;squirrel.attackDone=false;
+ squirrel.state=state;squirrel.stateT=0;squirrel.stateDur=dur;squirrel.attackDone=false;squirrel.effectDone=false;
  if(state==='jump'){squirrel.air=-2;squirrel.vy=-315;squirrel.vx=squirrel.dir*62;squirrelEffect('dust',.25);squirrelSfx('jump')}
  else if(state==='pounce'){squirrel.air=-4;squirrel.vy=-250;squirrel.vx=squirrel.dir*255;squirrelEffect('pounce',.34);squirrelSfx('pounce')}
  else if(state==='claw')squirrelSfx('claw');
@@ -301,9 +301,14 @@ function hurtSquirrel(damage,stun=false){
  if(squirrel.hp<=0){setSquirrelState('defeated',999);return}
  if(stun&&squirrel.state!=='stunned')setSquirrelState('stunned',.68)
 }
-function squirrelPlayerHit(range=64,height=62){
- const e=squirrelRect(),hitY=e.y+e.h-height,front=squirrel.dir>0?{x:e.x+e.w-8,y:hitY,w:range,h:height}:{x:e.x-range+8,y:hitY,w:range,h:height};
- return rectHits(front,{x:P.x,y:P.y,w:P.w,h:P.h})
+function squirrelPlayerHit(range=86,height=78){
+ const e=squirrelRect(),hitY=fy()-height,front=squirrel.dir>0?{x:e.x+e.w*.42,y:hitY,w:range,h:height}:{x:e.x+e.w*.58-range,y:hitY,w:range,h:height};
+ const playerBox={x:P.x-4,y:P.y-3,w:P.w+8,h:P.h+6};
+ return rectHits(front,playerBox)
+}
+function squirrelBodyHitsPlayer(pad=10){
+ const e=squirrelRect(),body={x:e.x-pad,y:e.y-pad,w:e.w+pad*2,h:e.h+pad*2},playerBox={x:P.x-3,y:P.y-3,w:P.w+6,h:P.h+6};
+ return rectHits(body,playerBox)
 }
 function squirrelChooseAttack(){
  const sequence=['claw','bite','pounce','tail','jump'],next=sequence[squirrel.attackCycle++%sequence.length];
@@ -329,23 +334,26 @@ function updateSquirrel(dt){
  if(squirrel.state==='stunned'){if(squirrel.stateT>=squirrel.stateDur){setSquirrelState('idle',.42);squirrel.attackCooldown=.7}return}
  if(squirrel.state==='crouch'){squirrel.dir=dx<0?-1:1;if(squirrel.stateT>=squirrel.stateDur)setSquirrelState('pounce',.8);return}
  if(squirrel.state==='claw'){
-  if(!squirrel.attackDone&&squirrel.stateT>=.17){squirrel.attackDone=true;squirrelEffect('claw',.24);if(squirrelPlayerHit(76,66))hurtFatNap()}
+  if(!squirrel.effectDone&&squirrel.stateT>=.12){squirrel.effectDone=true;squirrelEffect('claw',.24)}
+  if(!squirrel.attackDone&&squirrel.stateT>=.10&&squirrel.stateT<=.34&&squirrelPlayerHit(96,82)){squirrel.attackDone=true;hurtFatNap()}
   if(squirrel.stateT>=squirrel.stateDur){setSquirrelState('idle',.34);squirrel.attackCooldown=.82}return
  }
  if(squirrel.state==='bite'){
-  if(!squirrel.attackDone&&squirrel.stateT>=.20){squirrel.attackDone=true;squirrelEffect('bite',.22);if(squirrelPlayerHit(68,62))hurtFatNap()}
+  if(!squirrel.effectDone&&squirrel.stateT>=.15){squirrel.effectDone=true;squirrelEffect('bite',.22)}
+  if(!squirrel.attackDone&&squirrel.stateT>=.12&&squirrel.stateT<=.38&&squirrelPlayerHit(86,76)){squirrel.attackDone=true;hurtFatNap()}
   if(squirrel.stateT>=squirrel.stateDur){setSquirrelState('idle',.34);squirrel.attackCooldown=.86}return
  }
  if(squirrel.state==='tail'){
-  if(!squirrel.attackDone&&squirrel.stateT>=.22){squirrel.attackDone=true;squirrelEffect('tail',.32);const e=squirrelRect(),cx=e.x+e.w/2,cy=e.y+e.h*.72,px=P.x+P.w/2,py=P.y+P.h/2;if(Math.hypot(px-cx,py-cy)<105)hurtFatNap()}
+  if(!squirrel.effectDone&&squirrel.stateT>=.17){squirrel.effectDone=true;squirrelEffect('tail',.32)}
+  if(!squirrel.attackDone&&squirrel.stateT>=.14&&squirrel.stateT<=.44){const e=squirrelRect(),cx=e.x+e.w/2,cy=fy()-46,px=P.x+P.w/2,py=P.y+P.h/2;if(Math.hypot(px-cx,py-cy)<125){squirrel.attackDone=true;hurtFatNap()}}
   if(squirrel.stateT>=squirrel.stateDur){setSquirrelState('idle',.38);squirrel.attackCooldown=.9}return
  }
  if(squirrel.state==='pounce'){
-  if(!squirrel.attackDone&&squirrel.stateT>=.07&&rectHits(squirrelRect(),{x:P.x,y:P.y,w:P.w,h:P.h})){squirrel.attackDone=true;squirrelEffect('pounceHit',.25);hurtFatNap()}
+  if(!squirrel.attackDone&&squirrel.stateT>=.05&&squirrelBodyHitsPlayer(16)){squirrel.attackDone=true;squirrelEffect('pounceHit',.25);hurtFatNap()}
   return
  }
  if(squirrel.state==='jump'){
-  if(!squirrel.attackDone&&squirrel.stateT>=.07&&rectHits(squirrelRect(),{x:P.x,y:P.y,w:P.w,h:P.h})){squirrel.attackDone=true;squirrelEffect('pounceHit',.22);hurtFatNap()}
+  if(!squirrel.attackDone&&squirrel.stateT>=.05&&squirrelBodyHitsPlayer(12)){squirrel.attackDone=true;squirrelEffect('pounceHit',.22);hurtFatNap()}
   return
  }
  if(squirrel.state==='idle'){
@@ -370,7 +378,7 @@ function updateSquirrelFx(dt){for(let i=squirrelFx.length-1;i>=0;i--){const f=sq
 function drawGas(){for(const p of gas){const a=(1-p.age/p.life)*.42,px=p.x-S.cam;x.save();x.globalAlpha=a;const g=x.createRadialGradient(px,p.y,0,px,p.y,p.r);g.addColorStop(0,'#aecb41');g.addColorStop(.55,'#739839');g.addColorStop(1,'rgba(80,122,38,0)');x.fillStyle=g;x.beginPath();x.arc(px,p.y,p.r,0,Math.PI*2);x.fill();x.restore()}}
 function drawSquirrelSprite(img,r,targetH){
  if(!img||!img.complete||!img.naturalWidth)return false;
- const scale=targetH/r[3],drawW=r[2]*scale,baseline=fy()+11.5+squirrel.air+(squirrel.state==='defeated'?8:0),px=squirrel.x+squirrel.w/2-S.cam;
+ const scale=targetH/r[3],drawW=r[2]*scale,baseline=fy()+11.5+squirrel.air+(squirrel.state==='defeated'?12:0),px=squirrel.x+squirrel.w/2-S.cam;
  x.save();x.translate(px,baseline);if(squirrel.dir<0)x.scale(-1,1);if(squirrel.flash>0)x.globalAlpha=.58;
  x.drawImage(img,r[0],r[1],r[2],r[3],-drawW/2,-targetH,drawW,targetH);x.restore();return true
 }
