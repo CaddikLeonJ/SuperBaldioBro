@@ -761,120 +761,8 @@ function flamePath(w,h,phase=0){
  x.bezierCurveTo(-w*1.03,-h*.25,-w*.70,-h*.03,0,8);
  x.closePath()
 }
-function drawCloutFx(){
- const fade=cloutAuraFade();
- if(fade<=0)return;
- const transforming=clout.transforming,weakening=clout.detransforming,p=transforming?cl(clout.t/clout.duration,0,1):weakening?1-cl(clout.downT/clout.downDuration,0,1):1,px=P.x-S.cam+P.w/2,base=fy()+11.5;
- const sc=cloutScale(),growth=(sc.y-1)/.34,downP=weakening?cl(clout.downT/clout.downDuration,0,1):0;
- x.save();x.translate(px,base);
-
- // Flame-shaped energy shell: powerful while transforming, then dull/collapsing while weakening.
- const flicker=.96+Math.sin(S.t*(weakening?10:19))*.045+Math.sin(S.t*(weakening?17:31))*.025;
- const h=(104+70*growth)*(weakening?(1-downP*.20):1)*flicker,w=(35+22*growth)*(weakening?(1-downP*.16):1)*flicker;
- x.globalAlpha=(transforming?.60:weakening?.42*(1-downP*.35):.50*fade);
- const outer=x.createRadialGradient(0,-h*.48,8,0,-h*.48,h*.78);
- if(weakening){
-  outer.addColorStop(0,'rgba(235,240,245,.76)');outer.addColorStop(.30,'rgba(158,179,198,.54)');
-  outer.addColorStop(.62,'rgba(107,133,159,.34)');outer.addColorStop(1,'rgba(72,88,105,0)')
- }else{
-  outer.addColorStop(0,'rgba(255,255,255,.96)');outer.addColorStop(.22,'rgba(255,246,170,.88)');
-  outer.addColorStop(.52,'rgba(255,198,76,.68)');outer.addColorStop(.76,'rgba(110,198,255,.48)');
-  outer.addColorStop(1,'rgba(65,125,255,0)')
- }
- x.fillStyle=outer;flamePath(w,h);x.fill();
-
- // Layered inner flames make it read as a flame aura rather than a plain oval.
- const layers=4;
- for(let i=0;i<layers;i++){
-  const q=i/(layers-1),lh=h*(.90-q*.16),lw=w*(.86-q*.14),wiggle=Math.sin(S.t*(15+i*3)+i)*3;
-  x.globalAlpha=(transforming?(.20+.12*(1-q)):weakening?(.16+.07*(1-q))*(1-downP*.45):(.18+.08*(1-q))*fade);
-  x.fillStyle=weakening?(i%2===0?'rgba(190,202,214,.46)':'rgba(128,155,181,.38)'):(i%2===0?'rgba(255,244,150,.72)':'rgba(174,225,255,.55)');
-  x.save();x.translate(wiggle*(1-q),0);flamePath(lw,lh,S.t+i);x.fill();x.restore()
- }
-
- // Fast rising power streaks.
- x.lineWidth=2;
- const streaks=transforming?16:weakening?12:10;
- for(let i=0;i<streaks;i++){
-  const q=((S.t*(transforming?1.9:weakening?1.15:1.25)+i*.173)%1),side=(i%2?1:-1)*(16+(i%5)*7);
-  x.globalAlpha=(1-q)*(transforming?.62:weakening?.38*(1-downP*.35):.34*fade);
-  x.strokeStyle=weakening?(i%2?'#b8c5d1':'#7f95aa'):(i%3===0?'#ffffff':i%3===1?'#ffe57c':'#9edbff');
-  x.beginPath();
-  if(weakening){x.moveTo(side*.55,-92+q*18);x.lineTo(side,-22+q*62)}
-  else{x.moveTo(side,-8-q*20);x.lineTo(side*.55,-44-q*(78+28*growth))}
-  x.stroke()
- }
-
- // Evolution-style rings.
- for(let i=0;i<4;i++){
-  const rp=(S.t*(transforming?1.22:weakening?.82:.70)+i*.25)%1,rr=weakening?1-rp:rp;
-  x.globalAlpha=(1-rp)*(transforming?.48:weakening?.30*(1-downP*.35):.22*fade);
-  x.strokeStyle=weakening?(i%2?'#c8d0d8':'#8194a6'):(i%2?'#ffffff':'#ffe66d');x.lineWidth=2.6-rp*1.4;
-  x.beginPath();x.ellipse(0,-42-rr*34,20+rr*(30+12*growth),9+rr*16,0,0,Math.PI*2);x.stroke()
- }
-
- // Dense energy sparks.
- const sparks=transforming?Math.floor(14+22*p):weakening?12:10;
- x.fillStyle=weakening?'#b7c3cf':'#fff8c9';
- for(let i=0;i<sparks;i++){
-  const a=S.t*(weakening?2.0:3.3+(i%5)*.18)+i*2.399,r=26+(i%6)*5+growth*11,
-        sy=weakening?(-78+((S.t*48+i*19)%92)):(-48+Math.sin(a*1.8+i)*46);
-  x.globalAlpha=(.28+.68*Math.abs(Math.sin(a+i)))*(transforming?1:weakening?(1-downP)*.72:fade);
-  x.beginPath();x.arc(Math.cos(a)*r,sy,1.3+(i%3)*.8,0,Math.PI*2);x.fill()
- }
-
- // Power-surge shock rings line up with the body-growth pulses.
- if(transforming){
-  const times=[2.15,4.55,6.85,8.65,9.55];
-  for(let i=0;i<times.length;i++){
-   const age=clout.t-times[i];
-   if(age>=0&&age<.42){
-    const q=age/.42;
-    x.globalAlpha=(1-q)*.78;x.strokeStyle=i%2?'#9edbff':'#fff4a3';x.lineWidth=4*(1-q)+1;
-    x.beginPath();x.ellipse(0,-55,24+q*75,46+q*72,0,0,Math.PI*2);x.stroke()
-   }
-  }
- }
-
- // Weakening collapse rings pull inward as the power drains.
- if(weakening){
-  for(let i=0;i<3;i++){
-   const q=cl((downP-i*.16)/.58,0,1);if(q<=0||q>=1)continue;
-   x.globalAlpha=(1-q)*.44;x.strokeStyle=i%2?'#aab9c6':'#778b9d';x.lineWidth=2.4*(1-q)+.8;
-   x.beginPath();x.ellipse(0,-50,72-q*46,90-q*54,0,0,Math.PI*2);x.stroke()
-  }
- }
-
- // Bright finishing flashes.
- if(transforming&&p>.70){
-  const fp=(p-.70)/.30,flash=Math.max(0,Math.sin(clout.t*10.5))*fp;
-  x.globalAlpha=.20*flash;x.fillStyle='#fff';x.fillRect(-S.w,-S.h,S.w*2,S.h*2)
- }
- x.restore()
-}
-function drawCloutFrontFx(){
- const fade=cloutAuraFade();
- if(fade<=0)return;
- const transforming=clout.transforming,weakening=clout.detransforming,px=P.x-S.cam+P.w/2,base=fy()+11.5,sc=cloutScale(),growth=(sc.y-1)/.34,downP=weakening?cl(clout.downT/clout.downDuration,0,1):0;
- x.save();x.translate(px,base);
-
- // Foreground flame tongues partly cover the silhouette/body, placing him inside the aura.
- const tongues=transforming?9:6;
- for(let i=0;i<tongues;i++){
-  const a=i/(tongues-1),side=(a-.5)*(70+growth*28),wave=Math.sin(S.t*(13+i*.7)+i*1.7);
-  const th=30+(i%4)*10+growth*22+wave*6,tw=8+(i%3)*3;
-  x.globalAlpha=(transforming?.22+.20*Math.abs(wave):weakening?(.16+.10*Math.abs(wave))*(1-downP):.14*fade);
-  x.fillStyle=weakening?(i%2?'rgba(171,190,206,.42)':'rgba(111,137,160,.36)'):(i%3===0?'rgba(255,255,255,.78)':i%3===1?'rgba(255,225,105,.72)':'rgba(126,205,255,.55)');
-  x.beginPath();x.moveTo(side,4);x.quadraticCurveTo(side+tw*1.5,-th*.42,side+wave*tw,-th);x.quadraticCurveTo(side-tw*1.4,-th*.45,side,4);x.fill()
- }
-
- // Thin white shimmer around the front edge.
- x.globalAlpha=(transforming?.24:weakening?.16*(1-downP):.12*fade);
- x.strokeStyle=weakening?'#9aabba':'#fff';x.lineWidth=1.5;
- const h=100+growth*72,w=34+growth*21;
- flamePath(w,h);x.stroke();
- x.restore()
-}
+function drawCloutFx(){const fade=cloutAuraFade();if(fade<=0||!cloutAuraSheetOK)return;const px=P.x-S.cam+P.w/2,base=fy()+11.5,p=clout.transforming?cl(clout.t/clout.duration,0,1):clout.detransforming?1-cl(clout.downT/clout.downDuration,0,1):1,speed=clout.transforming?5+10*p:clout.detransforming?5:8,fi=Math.floor(S.t*speed)%CLOUT_AURA_FRAMES.length,pulse=1+Math.sin(S.t*(10+8*p))*.035,h=(126+58*p)*pulse;drawAtlasFrame(cloutAuraSheet,CLOUT_AURA_FRAMES[fi],px,base,h,.42+.48*fade);if(clout.transforming&&p>.66){const q=(p-.66)/.34,fi2=(fi+2)%CLOUT_AURA_FRAMES.length;drawAtlasFrame(cloutAuraSheet,CLOUT_AURA_FRAMES[fi2],px,base,(138+70*p)*(1+Math.sin(S.t*17)*.025),.18+.25*q)}if(clout.transforming&&p>.82){const flash=Math.max(0,Math.sin(clout.t*12))*((p-.82)/.18);x.save();x.globalAlpha=.08*flash;x.fillStyle='#fff';x.fillRect(0,0,S.w,S.h);x.restore()}}
+function drawCloutFrontFx(){if(!clout.transforming||!cloutAuraSheetOK)return;const p=cl(clout.t/clout.duration,0,1);if(p<.52)return;const px=P.x-S.cam+P.w/2,base=fy()+11.5,fi=(Math.floor(S.t*(7+11*p))+3)%CLOUT_AURA_FRAMES.length;drawAtlasFrame(cloutAuraSheet,CLOUT_AURA_FRAMES[fi],px,base,132+62*p,.10+.10*p)}
 function drawScaledFatNap(drawFn,sx,sy){
  const px=P.x-S.cam+P.w/2,py=P.y+P.h+(P.ground?11.5:0);
  x.save();x.translate(px,py);x.scale(sx,sy);x.translate(-px,-py);drawFn();x.restore()
@@ -889,20 +777,16 @@ function cloutSilhouetteImage(im){
  ox.globalCompositeOperation='source-in';ox.fillStyle='#111318';ox.fillRect(0,0,oc.width,oc.height);ox.globalCompositeOperation='source-over';
  cloutSilhouetteCanvas=oc;cloutSilhouetteSource=im;return oc
 }
-function drawTransformingFatNap(sx,sy){
- if(!idle||!idle.complete||!idle.naturalWidth){drawScaledFatNap(()=>ph(),sx,sy);return}
- const px=P.x-S.cam+P.w/2,py=P.y+P.h+(P.ground?11.5:0),b=MOTION_BOUNDS["IDLE.png"],
-       baseScale=96/idle.naturalHeight,anchor=b?b[3]:idle.naturalHeight,drawW=idle.naturalWidth*baseScale,drawH=idle.naturalHeight*baseScale,
-       t=clout.t,p=cl(t/clout.duration,0,1),sil=cloutSilhouetteImage(idle);
- const smooth=v=>v*v*(3-2*v);
- const fadeToBlack=smooth(cl(t/2.0,0,1));
- const fadeFromBlack=smooth(cl((t-8.0)/2.0,0,1));
- const darkness=cl(fadeToBlack*(1-fadeFromBlack),0,1);
- x.save();x.translate(px,py);x.scale(sx,sy);if(P.dir<0)x.scale(-1,1);
- if(darkness<1){x.globalAlpha=1-darkness;x.drawImage(idle,-drawW/2,-anchor*baseScale,drawW,drawH)}
- if(sil&&darkness>0){x.globalAlpha=darkness;x.drawImage(sil,-drawW/2,-anchor*baseScale,drawW,drawH)}
- x.restore()
-}
+function drawTransformingFatNap(sx,sy){if(!cloutPowerSheetOK){drawScaledFatNap(()=>idleFrame(),sx,sy);return}const p=cl(clout.t/clout.duration,0,1),i=p<.14?0:p<.30?1:p<.47?2:p<.64?3:p<.81?4:5,r=CLOUT_POWER_FRAMES[i],px=P.x-S.cam+P.w/2,base=P.y+P.h+11.5,targetH=(112+24*p)*(1+Math.sin(clout.t*18)*(.006+.008*p));x.save();x.translate(px,base);x.scale(sx,sy);if(P.dir<0)x.scale(-1,1);const scale=targetH/r[3],dw=r[2]*scale;x.drawImage(cloutPowerSheet,r[0],r[1],r[2],r[3],-dw/2,-targetH,dw,targetH);x.restore()}
+const cloutPowerSheet=new Image(),cloutAuraSheet=new Image();
+let cloutPowerSheetOK=false,cloutAuraSheetOK=false;
+cloutPowerSheet.crossOrigin='anonymous';cloutAuraSheet.crossOrigin='anonymous';
+cloutPowerSheet.onload=()=>cloutPowerSheetOK=true;cloutAuraSheet.onload=()=>cloutAuraSheetOK=true;
+cloutPowerSheet.src='https://raw.githubusercontent.com/CaddikLeonJ/SuperBaldioBro/main/'+encodeURI('Ayofatnap Power Up.PNG');
+cloutAuraSheet.src='https://raw.githubusercontent.com/CaddikLeonJ/SuperBaldioBro/main/'+encodeURI('Ayofatnap Power Up Aura Animation.PNG');
+const CLOUT_POWER_FRAMES=[[0,0,610,1120],[650,0,720,1120],[1450,0,720,1120],[650,1030,760,1220],[1400,1030,760,1220],[2160,980,840,1270]];
+const CLOUT_AURA_FRAMES=[[0,0,400,535],[390,0,420,535],[800,0,410,535],[0,500,430,524],[420,500,510,524],[900,500,636,524]];
+function drawAtlasFrame(img,r,cx,base,targetH,alpha=1){if(!img||!img.complete||!img.naturalWidth)return false;const sw=r[2],sh=r[3],scale=targetH/sh,dw=sw*scale;x.save();x.globalAlpha=alpha;x.drawImage(img,r[0],r[1],sw,sh,cx-dw/2,base-targetH,dw,targetH);x.restore();return true}
 const motionPlayer=player;player=function(){
  if(koT>0){koDeathFrame();return}
  if(P.inv>0&&Math.floor(S.t/.08)%2===0)return;
