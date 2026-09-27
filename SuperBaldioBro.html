@@ -1148,14 +1148,31 @@ function poweredIdleFrame(){
  x.save();x.translate(P.x-S.cam+P.w/2,P.y+P.h+(P.ground?15.5:4));if(P.dir<0)x.scale(-1,1);
  x.drawImage(im,-im.naturalWidth*scale/2,-anchor*scale,im.naturalWidth*scale,im.naturalHeight*scale);x.restore()
 }
+const poweredMotionBounds=new WeakMap();
+function poweredMotionSprite(im,size=1){
+ const iw=im&&(im.naturalWidth||im.width),ih=im&&(im.naturalHeight||im.height);if(!iw||!ih)return ph();
+ let b=poweredMotionBounds.get(im);
+ if(!b){
+  try{
+   const sc=Math.min(1,320/Math.max(iw,ih)),cw=Math.max(1,Math.ceil(iw*sc)),ch=Math.max(1,Math.ceil(ih*sc)),oc=document.createElement('canvas');
+   oc.width=cw;oc.height=ch;const g=oc.getContext('2d',{willReadFrequently:true});g.drawImage(im,0,0,cw,ch);
+   const d=g.getImageData(0,0,cw,ch).data;let minX=cw,minY=ch,maxX=-1,maxY=-1;
+   for(let y=0;y<ch;y++)for(let x0=0;x0<cw;x0++)if(d[(y*cw+x0)*4+3]>12){minX=Math.min(minX,x0);maxX=Math.max(maxX,x0);minY=Math.min(minY,y);maxY=Math.max(maxY,y)}
+   b=maxX>=minX?{x:minX/sc,y:minY/sc,w:(maxX-minX+1)/sc,h:(maxY-minY+1)/sc}:{x:0,y:0,w:iw,h:ih}
+  }catch(e){b={x:0,y:0,w:iw,h:ih}}
+  poweredMotionBounds.set(im,b)
+ }
+ const targetH=96*size,scale=targetH/b.h,dw=b.w*scale,px=P.x-S.cam+P.w/2,base=P.y+P.h+(P.ground?11.5:0);
+ x.save();x.translate(px,base);if(P.dir<0)x.scale(-1,1);x.drawImage(im,b.x,b.y,b.w,b.h,-dw/2,-targetH,dw,targetH);x.restore()
+}
 function poweredWalkFrame(){
  if(walkNow())walkDistance+=Math.abs(P.x-lastWalkX);else walkDistance=0;lastWalkX=P.x;
  const fi=Math.floor(walkDistance/12)%4;if((fi===0||fi===2)&&fi!==lastWalkSfxFrame)footstep(false);lastWalkSfxFrame=fi;
- uniformSprite(poweredWalkImgs[fi])
+ poweredMotionSprite(poweredWalkImgs[fi])
 }
 function poweredRunFrame(){
  const fi=Math.floor(S.t*10)%4;if((fi===0||fi===2)&&fi!==lastRunSfxFrame)footstep(true);lastRunSfxFrame=fi;
- uniformSprite(poweredRunImgs[fi],P.dir,.92)
+ poweredMotionSprite(poweredRunImgs[fi],.92)
 }
 function drawPoweredMotion(){
  if(idleNow()&&poweredIdleOK){poweredIdleFrame();return true}
