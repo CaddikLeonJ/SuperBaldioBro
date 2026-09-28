@@ -1,4 +1,4 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><title>Fat Nap: Super Baldio Bro — v0.4.09 CANVAS HUD BUTTONS</title><style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#070910;touch-action:none;user-select:none;-webkit-user-select:none;font-family:Arial,sans-serif}canvas{display:block;width:100vw;height:100dvh;touch-action:none}</style></head><body><canvas id="g"></canvas><script>(()=>{"use strict";const c=document.getElementById("g"),x=c.getContext("2d",{alpha:false}),S={w:0,h:0,d:1,stage:0,cy:0,ww:1600,cam:0,t:0,last:performance.now(),acc:0,start:false},P={x:180,y:0,w:34,h:64,sh:64,ch:40,vx:0,vy:0,dir:1,ground:true,crouch:false,run:false,hp:1,maxHp:1,hemmergy:100,maxHemmergy:100,inv:0},I={mx:0,my:0,run:false,jump:false,jp:null,rp:null,pp:null,attack:false,ap:null,jumpDown:false,headDown:false},U={jx:0,jy:0,jr:58,kr:25,rx:0,ry:0,rr:42,bx:0,by:0,br:48,ax:0,ay:0,ar:38};const idle=new Image(),idleScaleRef=new Image(),walkImgs=[new Image(),new Image(),new Image(),new Image()],runImgs=[new Image(),new Image(),new Image(),new Image()],headImgs=[new Image(),new Image(),new Image(),new Image()],crouchImgs=[new Image(),new Image(),new Image()],crawlSheet=new Image(),jumpImgs=[new Image(),new Image(),new Image()],lightImgs=[new Image(),new Image(),new Image()];let idleOK=false,walkOK=false,runOK=false,headOK=false,crouchOK=false,crawlOK=false,jumpOK=false,lightOK=false;idle.onload=()=>idleOK=true;idleScaleRef.crossOrigin='anonymous';idleScaleRef.src="https://raw.githubusercontent.com/CaddikLeonJ/SuperBaldioBro/2ff154de90a9d97d1864876ad733c0eba49e8d6b/"+encodeURI("FAT NAP SPRITES (CHARACTER MODELS) - 4.png");let walkLoaded=0;const newWalkFiles=["FAT NAP SPRITES (CHARACTER MODELS) - 4.png","FAT NAP SPRITES (CHARACTER MODELS) - 5.png","FAT NAP SPRITES (CHARACTER MODELS) - 6.png","FAT NAP SPRITES (CHARACTER MODELS) - 7.png"];walkImgs.forEach((im,i)=>{im.crossOrigin='anonymous';im.onload=()=>{walkLoaded++;walkOK=walkLoaded===4};im.src="https://raw.githubusercontent.com/CaddikLeonJ/SuperBaldioBro/2ff154de90a9d97d1864876ad733c0eba49e8d6b/"+encodeURI(newWalkFiles[i])});let runLoaded=0;const runFiles=["FAT NAP SPRITES (CHARACTER MODELS) - 13.png","FAT NAP SPRITES (CHARACTER MODELS) - 14.png","FAT NAP SPRITES (CHARACTER MODELS) - 15.png","FAT NAP SPRITES (CHARACTER MODELS) - 16.png"];runImgs.forEach((im,i)=>{im.onload=()=>{runLoaded++;runOK=runLoaded===4};im.src="https://raw.githubusercontent.com/CaddikLeonJ/SuperBaldioBro/2ff154de90a9d97d1864876ad733c0eba49e8d6b/"+encodeURI(runFiles[i])});let headLoaded=0;const headFiles=["FAT NAP SPRITES (CHARACTER MODELS) - 21.png","FAT NAP SPRITES (CHARACTER MODELS) - 22.png","FAT NAP SPRITES (CHARACTER MODELS) - 23.png","FAT NAP SPRITES (CHARACTER MODELS) - 24.png"];headImgs.forEach((im,i)=>{im.onload=()=>{headLoaded++;headOK=headLoaded===4};im.src="https://raw.githubusercontent.com/CaddikLeonJ/SuperBaldioBro/2ff154de90a9d97d1864876ad733c0eba49e8d6b/"+encodeURI(headFiles[i])});let crouchLoaded=0;const crouchFiles=["FAT NAP SPRITES (CHARACTER MODELS) - 31.png","FAT NAP SPRITES (CHARACTER MODELS) - 32.png","FAT NAP SPRITES (CHARACTER MODELS) - 33.png"],crouchRoot="https://raw.githubusercontent.com/CaddikLeonJ/SuperBaldioBro/2ff154de90a9d97d1864876ad733c0eba49e8d6b/";crouchImgs.forEach((im,i)=>{im.onload=()=>{crouchLoaded++;crouchOK=crouchLoaded===3};im.src=crouchRoot+encodeURI(crouchFiles[i])});crawlSheet.crossOrigin='anonymous';crawlSheet.onload=()=>crawlOK=true;crawlSheet.src="https://raw.githubusercontent.com/CaddikLeonJ/SuperBaldioBro/main/"+encodeURI("FAT_NAP_CRAWL.png");let jumpLoaded=0;const jumpFiles=["FAT NAP SPRITES (CHARACTER MODELS) - 35.png","FAT NAP SPRITES (CHARACTER MODELS) - 36.png","FAT NAP SPRITES (CHARACTER MODELS) - 37.png"],jumpRoot="https://raw.githubusercontent.com/CaddikLeonJ/SuperBaldioBro/2ff154de90a9d97d1864876ad733c0eba49e8d6b/";jumpImgs.forEach((im,i)=>{im.crossOrigin='anonymous';im.onload=()=>{jumpLoaded++;jumpOK=jumpLoaded===3};im.src=jumpRoot+encodeURI(jumpFiles[i])});let lightLoaded=0;const lightFiles=["FAT NAP SPRITES (CHARACTER MODELS) - 40.png","FAT NAP SPRITES (CHARACTER MODELS) - 41.png","FAT NAP SPRITES (CHARACTER MODELS) - 42.png"],lightRoot="https://raw.githubusercontent.com/CaddikLeonJ/SuperBaldioBro/2ff154de90a9d97d1864876ad733c0eba49e8d6b/";lightImgs.forEach((im,i)=>{im.onload=()=>{lightLoaded++;lightOK=lightLoaded===3};im.src=lightRoot+encodeURI(lightFiles[i])});idle.crossOrigin='anonymous';idle.src="https://raw.githubusercontent.com/CaddikLeonJ/SuperBaldioBro/2ff154de90a9d97d1864876ad733c0eba49e8d6b/"+encodeURI("FAT NAP SPRITES (CHARACTER MODELS).png");const A={ctx:null,m:null,music:null,musicSource:null,timer:null,n:0};
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><title>Fat Nap: Super Baldio Bro — v0.4.10 CANVAS HUD BUTTONS</title><style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#070910;touch-action:none;user-select:none;-webkit-user-select:none;font-family:Arial,sans-serif}canvas{display:block;width:100vw;height:100dvh;touch-action:none}</style></head><body><canvas id="g"></canvas><script>(()=>{"use strict";const c=document.getElementById("g"),x=c.getContext("2d",{alpha:false}),S={w:0,h:0,d:1,stage:0,cy:0,ww:1600,cam:0,t:0,last:performance.now(),acc:0,start:false},P={x:180,y:0,w:34,h:64,sh:64,ch:40,vx:0,vy:0,dir:1,ground:true,crouch:false,run:false,hp:1,maxHp:1,hemmergy:100,maxHemmergy:100,inv:0},I={mx:0,my:0,run:false,jump:false,jp:null,rp:null,pp:null,attack:false,ap:null,jumpDown:false,headDown:false},U={jx:0,jy:0,jr:58,kr:25,rx:0,ry:0,rr:42,bx:0,by:0,br:48,ax:0,ay:0,ar:38};const idle=new Image(),idleScaleRef=new Image(),walkImgs=[new Image(),new Image(),new Image(),new Image()],runImgs=[new Image(),new Image(),new Image(),new Image()],headImgs=[new Image(),new Image(),new Image(),new Image()],crouchImgs=[new Image(),new Image(),new Image()],crawlSheet=new Image(),jumpImgs=[new Image(),new Image(),new Image()],lightImgs=[new Image(),new Image(),new Image()];let idleOK=false,walkOK=false,runOK=false,headOK=false,crouchOK=false,crawlOK=false,jumpOK=false,lightOK=false;idle.onload=()=>idleOK=true;idleScaleRef.crossOrigin='anonymous';idleScaleRef.src="https://raw.githubusercontent.com/CaddikLeonJ/SuperBaldioBro/2ff154de90a9d97d1864876ad733c0eba49e8d6b/"+encodeURI("FAT NAP SPRITES (CHARACTER MODELS) - 4.png");let walkLoaded=0;const newWalkFiles=["FAT NAP SPRITES (CHARACTER MODELS) - 4.png","FAT NAP SPRITES (CHARACTER MODELS) - 5.png","FAT NAP SPRITES (CHARACTER MODELS) - 6.png","FAT NAP SPRITES (CHARACTER MODELS) - 7.png"];walkImgs.forEach((im,i)=>{im.crossOrigin='anonymous';im.onload=()=>{walkLoaded++;walkOK=walkLoaded===4};im.src="https://raw.githubusercontent.com/CaddikLeonJ/SuperBaldioBro/2ff154de90a9d97d1864876ad733c0eba49e8d6b/"+encodeURI(newWalkFiles[i])});let runLoaded=0;const runFiles=["FAT NAP SPRITES (CHARACTER MODELS) - 13.png","FAT NAP SPRITES (CHARACTER MODELS) - 14.png","FAT NAP SPRITES (CHARACTER MODELS) - 15.png","FAT NAP SPRITES (CHARACTER MODELS) - 16.png"];runImgs.forEach((im,i)=>{im.onload=()=>{runLoaded++;runOK=runLoaded===4};im.src="https://raw.githubusercontent.com/CaddikLeonJ/SuperBaldioBro/2ff154de90a9d97d1864876ad733c0eba49e8d6b/"+encodeURI(runFiles[i])});let headLoaded=0;const headFiles=["FAT NAP SPRITES (CHARACTER MODELS) - 21.png","FAT NAP SPRITES (CHARACTER MODELS) - 22.png","FAT NAP SPRITES (CHARACTER MODELS) - 23.png","FAT NAP SPRITES (CHARACTER MODELS) - 24.png"];headImgs.forEach((im,i)=>{im.onload=()=>{headLoaded++;headOK=headLoaded===4};im.src="https://raw.githubusercontent.com/CaddikLeonJ/SuperBaldioBro/2ff154de90a9d97d1864876ad733c0eba49e8d6b/"+encodeURI(headFiles[i])});let crouchLoaded=0;const crouchFiles=["FAT NAP SPRITES (CHARACTER MODELS) - 31.png","FAT NAP SPRITES (CHARACTER MODELS) - 32.png","FAT NAP SPRITES (CHARACTER MODELS) - 33.png"],crouchRoot="https://raw.githubusercontent.com/CaddikLeonJ/SuperBaldioBro/2ff154de90a9d97d1864876ad733c0eba49e8d6b/";crouchImgs.forEach((im,i)=>{im.onload=()=>{crouchLoaded++;crouchOK=crouchLoaded===3};im.src=crouchRoot+encodeURI(crouchFiles[i])});crawlSheet.crossOrigin='anonymous';crawlSheet.onload=()=>crawlOK=true;crawlSheet.src="https://raw.githubusercontent.com/CaddikLeonJ/SuperBaldioBro/main/"+encodeURI("FAT_NAP_CRAWL.png");let jumpLoaded=0;const jumpFiles=["FAT NAP SPRITES (CHARACTER MODELS) - 35.png","FAT NAP SPRITES (CHARACTER MODELS) - 36.png","FAT NAP SPRITES (CHARACTER MODELS) - 37.png"],jumpRoot="https://raw.githubusercontent.com/CaddikLeonJ/SuperBaldioBro/2ff154de90a9d97d1864876ad733c0eba49e8d6b/";jumpImgs.forEach((im,i)=>{im.crossOrigin='anonymous';im.onload=()=>{jumpLoaded++;jumpOK=jumpLoaded===3};im.src=jumpRoot+encodeURI(jumpFiles[i])});let lightLoaded=0;const lightFiles=["FAT NAP SPRITES (CHARACTER MODELS) - 40.png","FAT NAP SPRITES (CHARACTER MODELS) - 41.png","FAT NAP SPRITES (CHARACTER MODELS) - 42.png"],lightRoot="https://raw.githubusercontent.com/CaddikLeonJ/SuperBaldioBro/2ff154de90a9d97d1864876ad733c0eba49e8d6b/";lightImgs.forEach((im,i)=>{im.onload=()=>{lightLoaded++;lightOK=lightLoaded===3};im.src=lightRoot+encodeURI(lightFiles[i])});idle.crossOrigin='anonymous';idle.src="https://raw.githubusercontent.com/CaddikLeonJ/SuperBaldioBro/2ff154de90a9d97d1864876ad733c0eba49e8d6b/"+encodeURI("FAT NAP SPRITES (CHARACTER MODELS).png");const A={ctx:null,m:null,music:null,musicSource:null,timer:null,n:0};
 const SOUNDTRACK_FILES=[
  'Ayofatnap Certified Tuckas Video Game.mp3',
  'Ayofatnap Nap’s Stream Video Game.mp3',
@@ -203,7 +203,7 @@ function resetSquirrel(){gas.length=0;squirrelFx.length=0;Object.assign(squirrel
 resetSquirrel();
 function saveMoves(){try{localStorage.setItem('fatnap.moves.v1',JSON.stringify(slots))}catch{say('Loadout saved for this session')}}
 const mainMenu=document.createElement('div');mainMenu.id='main-menu';
-mainMenu.innerHTML=`<section><div class="main-kicker">FAT NAP</div><h1>SUPER BALDIO BRO.</h1><p class="main-sub">The completely accurate 6'4, 280 lb simulator.</p><button id="main-play">PLAY</button><button id="main-options">OPTIONS</button><div id="main-options-panel" hidden><h2>OPTIONS</h2><label>Music Volume <strong id="main-music-value">5%</strong><input id="main-music-slider" type="range" min="0" max="100" step="1" value="5"></label><label>Sound Volume <strong id="main-sound-value">100%</strong><input id="main-sound-slider" type="range" min="0" max="100" step="1" value="100"></label><div class="track-controls"><button id="main-prev-track">⏮ PREVIOUS TRACK</button><button id="main-next-track">NEXT TRACK ⏭</button></div><button id="main-options-back">BACK</button></div><p class="main-foot">v0.4.09 · Canvas HUD Buttons</p></section>`;
+mainMenu.innerHTML=`<section><div class="main-kicker">FAT NAP</div><h1>SUPER BALDIO BRO.</h1><p class="main-sub">The completely accurate 6'4, 280 lb simulator.</p><button id="main-play">PLAY</button><button id="main-options">OPTIONS</button><div id="main-options-panel" hidden><h2>OPTIONS</h2><label>Music Volume <strong id="main-music-value">5%</strong><input id="main-music-slider" type="range" min="0" max="100" step="1" value="5"></label><label>Sound Volume <strong id="main-sound-value">100%</strong><input id="main-sound-slider" type="range" min="0" max="100" step="1" value="100"></label><div class="track-controls"><button id="main-prev-track">⏮ PREVIOUS TRACK</button><button id="main-next-track">NEXT TRACK ⏭</button></div><button id="main-options-back">BACK</button></div><p class="main-foot">v0.4.10 · Canvas HUD Buttons</p></section>`;
 document.body.append(mainMenu);
 const mainMusicSlider=document.getElementById('main-music-slider'),mainSoundSlider=document.getElementById('main-sound-slider'),mainMusicValue=document.getElementById('main-music-value'),mainSoundValue=document.getElementById('main-sound-value');
 function loadMainAudioControls(){
@@ -690,7 +690,7 @@ const cloutBreathAudioURL='https://raw.githubusercontent.com/CaddikLeonJ/SuperBa
 let cloutTransformBuffer=null,cloutTransformPromise=null,cloutTransformVoice=null,cloutTransformGain=null,cloutTransformPauseOffset=0,cloutFrame5Paused=false,cloutBreathBuffer=null,cloutBreathPromise=null,cloutBreathSource=null,cloutBreathPlayed=false,cloutBreath2Played=false,cloutBreathFxStart=-1;
 let fatNapVoiceAnalyser=null,fatNapVoiceData=null,fatNapVoiceSpeechRegions=[],fatNapVoiceStart=0,fatNapMouthLevel=0;
 function startFatNapLipSync(ctx,node,speechRegions=[]){
- const an=ctx.createAnalyser();an.fftSize=256;an.smoothingTimeConstant=.42;node.connect(an);an.connect(A.m);
+ const an=ctx.createAnalyser();an.fftSize=256;an.smoothingTimeConstant=.42;node.connect(an);
  fatNapVoiceAnalyser=an;fatNapVoiceData=new Uint8Array(an.frequencyBinCount);fatNapVoiceSpeechRegions=speechRegions;fatNapVoiceStart=ctx.currentTime;fatNapMouthLevel=0
 }
 function stopFatNapLipSync(){fatNapVoiceAnalyser=null;fatNapVoiceData=null;fatNapVoiceSpeechRegions=[];fatNapMouthLevel=0}
@@ -947,7 +947,7 @@ function drawCloutPickup(){
  x.save();x.globalAlpha=.75;x.fillStyle='#fff4a3';x.font='bold 8px Arial';x.textAlign='center';x.fillText('CLOUT SHADES',px,py+18);x.restore()
 }
 function drawPowerupsForeground(){drawCloutPickup()}
-// v0.4.09: finish the 6'4 280 growth before the scream ends, then hold full size.
+// v0.4.10: finish the 6'4 280 growth before the scream ends, then hold full size.
 function cloutScale(){
  const target=SQUIRREL_DRAW_HEIGHTS.idle*2/96;
  if(clout.transforming){
@@ -1036,7 +1036,7 @@ async function loadCloutSheets(){
 loadCloutSheets();
 function drawAtlasFrame(img,r,cx,base,targetH,alpha=1){if(!img||!img.complete||!img.naturalWidth)return false;const sw=r[2],sh=r[3],scale=targetH/sh,dw=sw*scale;x.save();x.globalAlpha=alpha;x.drawImage(img,r[0],r[1],sw,sh,cx-dw/2,base-targetH,dw,targetH);x.restore();return true}
 
-// v0.4.09: 6'4 280 powered-form Idle / Walk / Run loaded from transparent PNG ZIPs.
+// v0.4.10: 6'4 280 powered-form Idle / Walk / Run loaded from transparent PNG ZIPs.
 const poweredIdleImgs=[],poweredWalkImgs=[],poweredRunImgs=[];
 let poweredIdleOK=false,poweredWalkOK=false,poweredRunOK=false;
 const POWERED_ZIPS={
@@ -1149,20 +1149,30 @@ function poweredIdleFrame(){
  x.drawImage(im,-im.naturalWidth*scale/2,-anchor*scale,im.naturalWidth*scale,im.naturalHeight*scale);x.restore()
 }
 const poweredMotionBounds=new WeakMap();
-function poweredMotionSprite(im,size=1){
- const iw=im&&(im.naturalWidth||im.width),ih=im&&(im.naturalHeight||im.height);if(!iw||!ih)return ph();
- let b=poweredMotionBounds.get(im);
- if(!b){
-  try{
-   const sc=Math.min(1,320/Math.max(iw,ih)),cw=Math.max(1,Math.ceil(iw*sc)),ch=Math.max(1,Math.ceil(ih*sc)),oc=document.createElement('canvas');
-   oc.width=cw;oc.height=ch;const g=oc.getContext('2d',{willReadFrequently:true});g.drawImage(im,0,0,cw,ch);
-   const d=g.getImageData(0,0,cw,ch).data;let minX=cw,minY=ch,maxX=-1,maxY=-1;
-   for(let y=0;y<ch;y++)for(let x0=0;x0<cw;x0++)if(d[(y*cw+x0)*4+3]>12){minX=Math.min(minX,x0);maxX=Math.max(maxX,x0);minY=Math.min(minY,y);maxY=Math.max(maxY,y)}
-   b=maxX>=minX?{x:minX/sc,y:minY/sc,w:(maxX-minX+1)/sc,h:(maxY-minY+1)/sc}:{x:0,y:0,w:iw,h:ih}
-  }catch(e){b={x:0,y:0,w:iw,h:ih}}
-  poweredMotionBounds.set(im,b)
- }
- const targetH=96*size,scale=targetH/b.h,dw=b.w*scale,px=P.x-S.cam+P.w/2,base=P.y+P.h+(P.ground?11.5:0);
+function poweredMotionCharacterBounds(im){
+ const iw=im&&(im.naturalWidth||im.width),ih=im&&(im.naturalHeight||im.height);if(!iw||!ih)return null;
+ let cached=poweredMotionBounds.get(im);if(cached)return cached;
+ try{
+  const cols=Math.min(180,iw),rows=Math.max(1,Math.round(cols*ih/iw)),oc=document.createElement('canvas');
+  oc.width=cols;oc.height=rows;const g=oc.getContext('2d',{willReadFrequently:true});g.drawImage(im,0,0,cols,rows);
+  const d=g.getImageData(0,0,cols,rows).data,mask=new Uint8Array(cols*rows);
+  for(let y=0;y<rows;y++)for(let x0=0;x0<cols;x0++)if(d[(y*cols+x0)*4+3]>18)mask[y*cols+x0]=1;
+  const seen=new Uint8Array(mask.length);let best=null;
+  for(let y=0;y<rows;y++)for(let x0=0;x0<cols;x0++){const k=y*cols+x0;if(!mask[k]||seen[k])continue;
+   const q=[k];seen[k]=1;let qi=0,n=0,minX=x0,maxX=x0,minY=y,maxY=y;
+   while(qi<q.length){const z=q[qi++],zx=z%cols,zy=(z/cols)|0;n++;minX=Math.min(minX,zx);maxX=Math.max(maxX,zx);minY=Math.min(minY,zy);maxY=Math.max(maxY,zy);
+    for(let yy=Math.max(0,zy-1);yy<=Math.min(rows-1,zy+1);yy++)for(let xx=Math.max(0,zx-1);xx<=Math.min(cols-1,zx+1);xx++){const nk=yy*cols+xx;if(mask[nk]&&!seen[nk]){seen[nk]=1;q.push(nk)}}
+   }
+   const w=maxX-minX+1,h=maxY-minY+1,score=n*Math.sqrt(Math.max(1,h));
+   if(h>rows*.28&&w>cols*.08&&(!best||score>best.score))best={minX,maxX,minY,maxY,score}
+  }
+  if(best){const sx=iw/cols,sy=ih/rows,pad=2;b={x:Math.max(0,(best.minX-pad)*sx),y:Math.max(0,(best.minY-pad)*sy),w:Math.min(iw,(best.maxX+1+pad)*sx)-Math.max(0,(best.minX-pad)*sx),h:Math.min(ih,(best.maxY+1+pad)*sy)-Math.max(0,(best.minY-pad)*sy)};poweredMotionBounds.set(im,b);return b}
+ }catch(e){}
+ const b={x:0,y:0,w:iw,h:ih};poweredMotionBounds.set(im,b);return b
+}
+function poweredMotionSprite(im){
+ const b=poweredMotionCharacterBounds(im);if(!b)return ph();
+ const targetH=96,scale=targetH/b.h,dw=b.w*scale,px=P.x-S.cam+P.w/2,base=P.y+P.h+(P.ground?15.5:4);
  x.save();x.translate(px,base);if(P.dir<0)x.scale(-1,1);x.drawImage(im,b.x,b.y,b.w,b.h,-dw/2,-targetH,dw,targetH);x.restore()
 }
 function poweredWalkFrame(){
@@ -1172,7 +1182,7 @@ function poweredWalkFrame(){
 }
 function poweredRunFrame(){
  const fi=Math.floor(S.t*10)%4;if((fi===0||fi===2)&&fi!==lastRunSfxFrame)footstep(true);lastRunSfxFrame=fi;
- poweredMotionSprite(poweredRunImgs[fi],.92)
+ poweredMotionSprite(poweredRunImgs[fi])
 }
 function drawPoweredMotion(){
  if(idleNow()&&poweredIdleOK){poweredIdleFrame();return true}
