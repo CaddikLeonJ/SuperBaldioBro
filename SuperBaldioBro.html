@@ -293,8 +293,8 @@ function idleFrame(){proportionalSprite(idle,1.04,idleScaleRef)}function crouchF
 function lightheadedFrame(){const elapsed=lightheadedDuration-lightheadedT,frameHold=.40;let i;if(elapsed<.24||lightheadedT<.24)i=2;else i=Math.floor((elapsed-.24)/frameHold)%2;const im=lightImgs[i];if(!im||!im.complete)return ph();const targetH=96,scale=targetH/im.height,drawW=im.width*scale,px=P.x-S.cam+P.w/2,bob=Math.sin(elapsed*7)*.6,py=P.y+P.h+11.5+bob;x.save();x.translate(px,py);if(P.dir<0)x.scale(-1,1);x.drawImage(im,-drawW/2,-targetH,drawW,targetH);x.restore()}function jumpFrame(){let i=jumpPrep?0:(P.vy<180?1:2);const im=jumpImgs[i];if(!im||!im.complete)return ph();proportionalSprite(im,i===1?.82:.70)}let walkDistance=0,lastWalkX=P.x;function walkFrame(){const moving=walkNow();if(moving)walkDistance+=Math.abs(P.x-lastWalkX);else walkDistance=0;lastWalkX=P.x;const footFi=Math.floor(walkDistance/12)%4;if((footFi===0||footFi===2)&&footFi!==lastWalkSfxFrame)footstep(false);lastWalkSfxFrame=footFi;const sequence=[0,1,0,2,0,3,0],beat=Math.floor(walkDistance/12)%sequence.length,fi=sequence[beat],im=walkImgs[fi];if(!im||!im.complete)return ph();const targetH=96,scale=targetH/im.height,drawW=im.width*scale,px=P.x-S.cam+P.w/2,py=P.y+P.h+11.5;x.save();x.translate(px,py);if(P.dir<0)x.scale(-1,1);x.drawImage(im,-drawW/2,-targetH,drawW,targetH);x.restore()}function runFrame(){const fi=Math.floor(S.t*10)%4,im=runImgs[fi];if((fi===0||fi===2)&&fi!==lastRunSfxFrame)footstep(true);lastRunSfxFrame=fi;if(!im||!im.complete)return ph();const targetH=92,scale=targetH/im.height,drawW=im.width*scale,px=P.x-S.cam+P.w/2,py=P.y+P.h+11.5;x.save();x.translate(px,py);if(P.dir<0)x.scale(-1,1);x.drawImage(im,-drawW/2,-targetH,drawW,targetH);x.restore()}function headFrame(){let i;if(headT<.035)i=0;else if(headT<.07)i=1;else if(headT<.32)i=2;else i=3;const im=headImgs[i];if(!im||!im.complete)return ph();const targetH=60,scale=targetH/im.height,drawW=im.width*scale,px=P.x-S.cam+P.w/2,py=P.y+P.h+11.5;x.save();x.translate(px,py);if(P.dir<0)x.scale(-1,1);x.drawImage(im,-drawW/2,-targetH,drawW,targetH);x.restore()}function headAura(){}
 function headMoveFx(){}
 function headFx(){if(headFxT<=0)return;const p=1-headFxT/.16,alpha=1-p,px=P.x-S.cam+P.w/2+P.dir*18,py=P.y+P.h*.22;x.save();x.translate(px,py);if(P.dir<0)x.scale(-1,1);x.globalAlpha=alpha;x.strokeStyle='#fff3c4';x.lineWidth=4*(1-p)+1;x.beginPath();x.arc(0,0,12+p*30,-.9,.9);x.stroke();x.strokeStyle='#ffd36a';x.lineWidth=3;for(let i=-2;i<=2;i++){const a=i*.34,len=24+p*34;x.beginPath();x.moveTo(8,Math.sin(a)*7);x.lineTo(8+Math.cos(a)*len,Math.sin(a)*len);x.stroke()}x.restore()}
-function player(){if(lightheadedT>0){if(lightOK)lightheadedFrame();else ph();return}if(headActive&&headOK){headFrame();return}if(crouchState==='downing'||crouchState==='uping'){if(crouchOK)crouchFrame();else ph();return}if(crouchState==='down'){if(crawlHeld()&&Math.abs(P.vx)>1&&crawlOK)crawlFrame();else if(crouchOK)crouchFrame();else ph();return}if(jumpPrep||!P.ground){if(jumpOK)jumpFrame();else ph();return}if(idleNow()&&idleOK){idleFrame();return}if(P.run&&P.ground&&!P.crouch&&runOK){runFrame();return}if(walkNow()&&walkOK){walkFrame();return}ph()}function controls(){const panelH=S.h-S.cy;x.fillStyle='#0b0e16';x.fillRect(0,S.cy,S.w,panelH);x.fillStyle='rgba(255,255,255,.04)';x.fillRect(0,S.cy,S.w,1);x.save();x.shadowColor='rgba(0,0,0,.55)';x.shadowBlur=14;x.fillStyle='#111621';x.strokeStyle='#3d465b';x.lineWidth=3;x.beginPath();x.arc(U.jx,U.jy,U.jr,0,Math.PI*2);x.fill();x.stroke();x.shadowBlur=0;x.strokeStyle='#252c3b';x.lineWidth=2;x.beginPath();x.arc(U.jx,U.jy,U.jr-9,0,Math.PI*2);x.stroke();const kx=U.jx+I.mx*U.jr*.52,ky=U.jy+I.my*U.jr*.52;x.shadowColor='rgba(0,0,0,.65)';x.shadowBlur=9;x.shadowOffsetY=5;x.fillStyle='#343d51';x.strokeStyle='#758099';x.lineWidth=2;x.beginPath();x.arc(kx,ky,U.kr+3,0,Math.PI*2);x.fill();x.stroke();x.shadowBlur=0;x.shadowOffsetY=0;x.fillStyle='rgba(255,255,255,.12)';x.beginPath();x.ellipse(kx-6,ky-7,10,6,-.4,0,Math.PI*2);x.fill();x.restore();function btn(cx,cy,r,label,fill,stroke,pressed,fs){const dy=pressed?5:0;x.save();x.fillStyle='#080b11';x.beginPath();x.arc(cx,cy+6,r+3,0,Math.PI*2);x.fill();x.shadowColor='rgba(0,0,0,.5)';x.shadowBlur=pressed?2:9;x.shadowOffsetY=pressed?1:5;x.fillStyle=fill;x.strokeStyle=stroke;x.lineWidth=3;x.beginPath();x.arc(cx,cy+dy,r,0,Math.PI*2);x.fill();x.stroke();x.shadowBlur=0;x.shadowOffsetY=0;if(!pressed){x.fillStyle='rgba(255,255,255,.13)';x.beginPath();x.ellipse(cx-8,cy-10,r*.42,r*.18,-.35,0,Math.PI*2);x.fill()}x.fillStyle='#f5f7ff';x.font='700 '+fs+'px Arial';x.textAlign='center';x.textBaseline='middle';x.fillText(label,cx,cy+dy);x.restore()}btn(U.bx,U.by,U.br,'JUMP','#263e67','#6486bd',I.jumpDown,12);btn(U.ax,U.ay,U.ar,'HEADBUTT','#562d38','#9b596a',I.headDown,9);x.fillStyle='#747e95';x.font='10px Arial';x.textAlign='center';x.textBaseline='alphabetic';x.fillText('MOVE',U.jx,U.jy+U.jr+18)}function hud(){x.fillStyle='rgba(7,9,16,.72)';x.fillRect(0,0,S.w,32);x.fillStyle='#fff';x.font='700 13px Arial';x.textAlign='left';x.fillText('SUPER BALDIO BRO. — v0.4.101',10,20);x.fillStyle='#b9bfd2';x.font='11px Arial';x.textAlign='right';x.fillText(idleNow()?'IDLE ✓':P.run?'RUN':P.crouch?'CROUCH':'WALK ✓',S.w-10,20)}function overlay(){}function render(){x.setTransform(S.d,0,0,S.d,0,0);x.fillStyle='#070910';x.fillRect(0,0,S.w,S.h);room();player();hud();controls();overlay()}function loop(t){const dt=Math.min((t-S.last)/1000,.033);S.last=t;S.t+=dt;S.acc+=dt;while(S.acc>=1/120){if(S.start)step(1/120);S.acc-=1/120}render();requestAnimationFrame(loop)}function pos(e){const r=c.getBoundingClientRect();return{x:(e.clientX-r.left)*S.w/r.width,y:(e.clientY-r.top)*S.h/r.height}}const inc=(a,b,cx,cy,r)=>{const dx=a-cx,dy=b-cy;return dx*dx+dy*dy<=r*r};function joy(a,b){let dx=a-U.jx,dy=b-U.jy,d=Math.hypot(dx,dy);if(d>U.jr){dx*=U.jr/d;dy*=U.jr/d}I.mx=cl(dx/U.jr,-1,1);I.my=cl(dy/U.jr,-1,1)}// v0.3.0: held attacks and three-slot loadout. All implemented moves are unlocked.
-const VERSION='0.4.101', ASSET_ROOT='https://raw.githubusercontent.com/CaddikLeonJ/SuperBaldioBro/2ff154de90a9d97d1864876ad733c0eba49e8d6b/';
+function player(){if(lightheadedT>0){if(lightOK)lightheadedFrame();else ph();return}if(headActive&&headOK){headFrame();return}if(crouchState==='downing'||crouchState==='uping'){if(crouchOK)crouchFrame();else ph();return}if(crouchState==='down'){if(crawlHeld()&&Math.abs(P.vx)>1&&crawlOK)crawlFrame();else if(crouchOK)crouchFrame();else ph();return}if(jumpPrep||!P.ground){if(jumpOK)jumpFrame();else ph();return}if(idleNow()&&idleOK){idleFrame();return}if(P.run&&P.ground&&!P.crouch&&runOK){runFrame();return}if(walkNow()&&walkOK){walkFrame();return}ph()}function controls(){const panelH=S.h-S.cy;x.fillStyle='#0b0e16';x.fillRect(0,S.cy,S.w,panelH);x.fillStyle='rgba(255,255,255,.04)';x.fillRect(0,S.cy,S.w,1);x.save();x.shadowColor='rgba(0,0,0,.55)';x.shadowBlur=14;x.fillStyle='#111621';x.strokeStyle='#3d465b';x.lineWidth=3;x.beginPath();x.arc(U.jx,U.jy,U.jr,0,Math.PI*2);x.fill();x.stroke();x.shadowBlur=0;x.strokeStyle='#252c3b';x.lineWidth=2;x.beginPath();x.arc(U.jx,U.jy,U.jr-9,0,Math.PI*2);x.stroke();const kx=U.jx+I.mx*U.jr*.52,ky=U.jy+I.my*U.jr*.52;x.shadowColor='rgba(0,0,0,.65)';x.shadowBlur=9;x.shadowOffsetY=5;x.fillStyle='#343d51';x.strokeStyle='#758099';x.lineWidth=2;x.beginPath();x.arc(kx,ky,U.kr+3,0,Math.PI*2);x.fill();x.stroke();x.shadowBlur=0;x.shadowOffsetY=0;x.fillStyle='rgba(255,255,255,.12)';x.beginPath();x.ellipse(kx-6,ky-7,10,6,-.4,0,Math.PI*2);x.fill();x.restore();function btn(cx,cy,r,label,fill,stroke,pressed,fs){const dy=pressed?5:0;x.save();x.fillStyle='#080b11';x.beginPath();x.arc(cx,cy+6,r+3,0,Math.PI*2);x.fill();x.shadowColor='rgba(0,0,0,.5)';x.shadowBlur=pressed?2:9;x.shadowOffsetY=pressed?1:5;x.fillStyle=fill;x.strokeStyle=stroke;x.lineWidth=3;x.beginPath();x.arc(cx,cy+dy,r,0,Math.PI*2);x.fill();x.stroke();x.shadowBlur=0;x.shadowOffsetY=0;if(!pressed){x.fillStyle='rgba(255,255,255,.13)';x.beginPath();x.ellipse(cx-8,cy-10,r*.42,r*.18,-.35,0,Math.PI*2);x.fill()}x.fillStyle='#f5f7ff';x.font='700 '+fs+'px Arial';x.textAlign='center';x.textBaseline='middle';x.fillText(label,cx,cy+dy);x.restore()}btn(U.bx,U.by,U.br,'JUMP','#263e67','#6486bd',I.jumpDown,12);btn(U.ax,U.ay,U.ar,'HEADBUTT','#562d38','#9b596a',I.headDown,9);x.fillStyle='#747e95';x.font='10px Arial';x.textAlign='center';x.textBaseline='alphabetic';x.fillText('MOVE',U.jx,U.jy+U.jr+18)}function hud(){x.fillStyle='rgba(7,9,16,.72)';x.fillRect(0,0,S.w,32);x.fillStyle='#fff';x.font='700 13px Arial';x.textAlign='left';x.fillText('SUPER BALDIO BRO. — v0.4.102',10,20);x.fillStyle='#b9bfd2';x.font='11px Arial';x.textAlign='right';x.fillText(idleNow()?'IDLE ✓':P.run?'RUN':P.crouch?'CROUCH':'WALK ✓',S.w-10,20)}function overlay(){}function render(){x.setTransform(S.d,0,0,S.d,0,0);x.fillStyle='#070910';x.fillRect(0,0,S.w,S.h);room();player();hud();controls();overlay()}function loop(t){const dt=Math.min((t-S.last)/1000,.033);S.last=t;S.t+=dt;S.acc+=dt;while(S.acc>=1/120){if(S.start)step(1/120);S.acc-=1/120}render();requestAnimationFrame(loop)}function pos(e){const r=c.getBoundingClientRect();return{x:(e.clientX-r.left)*S.w/r.width,y:(e.clientY-r.top)*S.h/r.height}}const inc=(a,b,cx,cy,r)=>{const dx=a-cx,dy=b-cy;return dx*dx+dy*dy<=r*r};function joy(a,b){let dx=a-U.jx,dy=b-U.jy,d=Math.hypot(dx,dy);if(d>U.jr){dx*=U.jr/d;dy*=U.jr/d}I.mx=cl(dx/U.jr,-1,1);I.my=cl(dy/U.jr,-1,1)}// v0.3.0: held attacks and three-slot loadout. All implemented moves are unlocked.
+const VERSION='0.4.102', ASSET_ROOT='https://raw.githubusercontent.com/CaddikLeonJ/SuperBaldioBro/2ff154de90a9d97d1864876ad733c0eba49e8d6b/';
 const MOVES={
  headbutt:{name:'Headbutt',description:'Tap to strike in front of you.'},
  fart:{name:'Fart',description:'Hold to turn and blast gas toward your aim. Gas deals 30 damage per second.'},
@@ -523,43 +523,111 @@ const clout={x:340,taken:false,pendingTransform:false,transforming:false,powered
 const cloutPickupSpinSheet=new Image(),cloutPickupModel=new Image();
 let cloutPickupSpinOK=false,cloutPickupModelOK=false;
 let CLOUT_SPIN_FRAMES=[[20,496,745,295],[783,488,748,325],[1534,457,673,320],[2213,455,764,443],[20,1288,730,329],[763,1265,715,391],[1514,1273,674,320],[2222,1287,745,318]];
+let CLOUT_SPIN_FRAME_IMAGES=[];
 function measureCloutSpinFrames(img){
  try{
-  const cols=4,rows=2,W=img.naturalWidth,H=img.naturalHeight,cw=Math.floor(W/cols),ch=Math.floor(H/rows),out=[];
-  const cv=document.createElement('canvas'),g=cv.getContext('2d',{willReadFrequently:true});
+  const cols=4,rows=2,W=img.naturalWidth,H=img.naturalHeight,cw=Math.floor(W/cols),ch=Math.floor(H/rows),rects=[],frames=[];
   for(let row=0;row<rows;row++)for(let col=0;col<cols;col++){
-   const x0=col*cw,y0=row*ch,x1=col===cols-1?W:(col+1)*cw,y1=row===rows-1?H:(row+1)*ch,cellW=x1-x0,cellH=y1-y0;
-   const scale=Math.min(.32,220/Math.max(cellW,cellH)),tw=Math.max(48,Math.round(cellW*scale)),th=Math.max(48,Math.round(cellH*scale));
-   cv.width=tw;cv.height=th;g.clearRect(0,0,tw,th);g.imageSmoothingEnabled=true;g.drawImage(img,x0,y0,cellW,cellH,0,0,tw,th);
-   const data=g.getImageData(0,0,tw,th).data,seen=new Uint8Array(tw*th);
-   let best=null;
-   for(let sy=0;sy<th;sy++)for(let sx=0;sx<tw;sx++){
-    const si=sy*tw+sx;if(seen[si]||data[si*4+3]<24)continue;
-    let stack=[si],count=0,minX=sx,maxX=sx,minY=sy,maxY=sy;seen[si]=1;
-    while(stack.length){
-     const p=stack.pop(),px=p%tw,py=(p/tw)|0;count++;
-     if(px<minX)minX=px;if(px>maxX)maxX=px;if(py<minY)minY=py;if(py>maxY)maxY=py;
-     for(let oy=-1;oy<=1;oy++)for(let ox=-1;ox<=1;ox++){
-      if(!ox&&!oy)continue;const nx=px+ox,ny=py+oy;if(nx<0||ny<0||nx>=tw||ny>=th)continue;
-      const ni=ny*tw+nx;if(!seen[ni]&&data[ni*4+3]>=24){seen[ni]=1;stack.push(ni)}
+   // Give every nominal grid cell breathing room so no temple/lens can be chopped by the cell edge.
+   const mx=Math.round(cw*.08),my=Math.round(ch*.08),
+         nominalX=col*cw,nominalY=row*ch,
+         rx0=Math.max(0,nominalX-mx),ry0=Math.max(0,nominalY-my),
+         rx1=Math.min(W,(col===cols-1?W:(col+1)*cw)+mx),ry1=Math.min(H,(row===rows-1?H:(row+1)*ch)+my),
+         rw=rx1-rx0,rh=ry1-ry0,
+         expectedX=(nominalX+cw*.5-rx0),expectedY=(nominalY+ch*.5-ry0);
+
+   const cell=document.createElement('canvas');cell.width=rw;cell.height=rh;
+   const cg=cell.getContext('2d',{willReadFrequently:true});cg.drawImage(img,rx0,ry0,rw,rh,0,0,rw,rh);
+
+   const probeScale=Math.min(.42,260/Math.max(rw,rh)),pw=Math.max(64,Math.round(rw*probeScale)),ph=Math.max(64,Math.round(rh*probeScale));
+   const probe=document.createElement('canvas');probe.width=pw;probe.height=ph;
+   const pg=probe.getContext('2d',{willReadFrequently:true});pg.drawImage(cell,0,0,pw,ph);
+   const pd=pg.getImageData(0,0,pw,ph).data,mask=new Uint8Array(pw*ph);
+   for(let p=0;p<mask.length;p++)mask[p]=pd[p*4+3]>12?1:0;
+
+   // Slight dilation joins anti-aliased gaps but still leaves labels/numbers separate.
+   const dil=new Uint8Array(mask.length),rad=1;
+   for(let y=0;y<ph;y++)for(let x0=0;x0<pw;x0++)if(mask[y*pw+x0])
+    for(let yy=Math.max(0,y-rad);yy<=Math.min(ph-1,y+rad);yy++)
+     for(let xx=Math.max(0,x0-rad);xx<=Math.min(pw-1,x0+rad);xx++)dil[yy*pw+xx]=1;
+
+   const seen=new Uint8Array(dil.length),owner=new Int16Array(dil.length),parts=[];owner.fill(-1);let cid=0;
+   for(let y=0;y<ph;y++)for(let x0=0;x0<pw;x0++){
+    const k=y*pw+x0;if(!dil[k]||seen[k])continue;
+    const id=cid++,q=[k];seen[k]=1;let qi=0,n=0,minX=x0,maxX=x0,minY=y,maxY=y;
+    while(qi<q.length){
+     const z=q[qi++],zx=z%pw,zy=(z/pw)|0;owner[z]=id;n++;
+     if(zx<minX)minX=zx;if(zx>maxX)maxX=zx;if(zy<minY)minY=zy;if(zy>maxY)maxY=zy;
+     for(let yy=Math.max(0,zy-1);yy<=Math.min(ph-1,zy+1);yy++)for(let xx=Math.max(0,zx-1);xx<=Math.min(pw-1,zx+1);xx++){
+      const nk=yy*pw+xx;if(dil[nk]&&!seen[nk]){seen[nk]=1;q.push(nk)}
      }
     }
-    const bw=maxX-minX+1,bh=maxY-minY+1;
-    if(count<12||bw<4||bh<4)continue;
-    const cx=(minX+maxX+1)/2,cy=(minY+maxY+1)/2,dx=Math.abs(cx-tw/2)/(tw/2),dy=Math.abs(cy-th/2)/(th/2);
-    const centreBias=Math.max(.55,1-.18*(dx+dy)),score=count*Math.sqrt(bw*bh)*centreBias;
-    if(!best||score>best.score)best={minX,minY,maxX,maxY,score}
+    const w=maxX-minX+1,h=maxY-minY+1;
+    if(n>6&&w>2&&h>2)parts.push({id,n,minX,maxX,minY,maxY,w,h,cx:(minX+maxX)/2,cy:(minY+maxY)/2})
    }
-   if(best){
-    const pad=Math.max(2,Math.round(Math.max(tw,th)*.012));
-    const bx0=Math.max(0,best.minX-pad),by0=Math.max(0,best.minY-pad),bx1=Math.min(tw-1,best.maxX+pad),by1=Math.min(th-1,best.maxY+pad);
-    const sx0=x0+Math.floor(bx0/tw*cellW),sy0=y0+Math.floor(by0/th*cellH);
-    const sx1=x0+Math.ceil((bx1+1)/tw*cellW),sy1=y0+Math.ceil((by1+1)/th*cellH);
-    out.push([sx0,sy0,Math.max(1,sx1-sx0),Math.max(1,sy1-sy0)])
-   }else out.push([x0,y0,cellW,cellH])
+   if(!parts.length)throw new Error('Clout spin frame contains no artwork');
+
+   const ex=expectedX*probeScale,ey=expectedY*probeScale;
+   const primary=parts.slice().sort((a,b)=>{
+    const da=Math.hypot((a.cx-ex)/pw,(a.cy-ey)/ph),db=Math.hypot((b.cx-ex)/pw,(b.cy-ey)/ph),
+          sa=a.n*Math.sqrt(a.w*a.h)*Math.max(.38,1-da*.8),sb=b.n*Math.sqrt(b.w*b.h)*Math.max(.38,1-db*.8);
+    return sb-sa
+   })[0];
+
+   // Keep the main glasses plus nearby disconnected arms/highlights, but not labels/numbers.
+   const keep=new Set([primary.id]),padX=primary.w*1.05,padY=primary.h*.90;
+   for(const p of parts){
+    if(p.id===primary.id)continue;
+    const nearX=p.maxX>=primary.minX-padX&&p.minX<=primary.maxX+padX,
+          nearY=p.maxY>=primary.minY-padY&&p.minY<=primary.maxY+padY,
+          notLabel=p.cy<=primary.maxY+primary.h*.30,
+          substantial=p.n>=Math.max(3,primary.n*.0012);
+    if(nearX&&nearY&&notLabel&&substantial)keep.add(p.id)
+   }
+
+   const src=cg.getImageData(0,0,rw,rh),sd=src.data;
+   let minX=rw,minY=rh,maxX=-1,maxY=-1;
+   const belongs=(px,py)=>{
+    const sx=Math.max(0,Math.min(pw-1,Math.floor(px*probeScale))),sy=Math.max(0,Math.min(ph-1,Math.floor(py*probeScale)));
+    if(keep.has(owner[sy*pw+sx]))return true;
+    // Preserve the soft/anti-aliased edge around a kept component.
+    for(let oy=-1;oy<=1;oy++)for(let ox=-1;ox<=1;ox++){
+     const nx=sx+ox,ny=sy+oy;if(nx>=0&&ny>=0&&nx<pw&&ny<ph&&keep.has(owner[ny*pw+nx]))return true
+    }
+    return false
+   };
+   for(let y=0;y<rh;y++)for(let x0=0;x0<rw;x0++){
+    const j=(y*rw+x0)*4;if(sd[j+3]<=8)continue;
+    if(!belongs(x0,y)){sd[j+3]=0;continue}
+    if(x0<minX)minX=x0;if(x0>maxX)maxX=x0;if(y<minY)minY=y;if(y>maxY)maxY=y
+   }
+   cg.putImageData(src,0,0);
+   if(maxX<minX||maxY<minY)throw new Error('Clout spin frame cleaned empty');
+
+   // Generous transparent border prevents shadows/soft edges from ever touching the crop.
+   const border=Math.max(10,Math.round(Math.max(maxX-minX+1,maxY-minY+1)*.08)),
+         x0=Math.max(0,minX-border),y0=Math.max(0,minY-border),x1=Math.min(rw,maxX+border+1),y1=Math.min(rh,maxY+border+1),
+         crop=document.createElement('canvas');
+   crop.width=Math.max(1,x1-x0);crop.height=Math.max(1,y1-y0);
+   crop.getContext('2d').drawImage(cell,x0,y0,crop.width,crop.height,0,0,crop.width,crop.height);
+
+   // Clear everything except the isolated shades in the crop too.
+   const gg=crop.getContext('2d',{willReadFrequently:true}),ci=gg.getImageData(0,0,crop.width,crop.height),cd=ci.data;
+   let vMinX=crop.width,vMinY=crop.height,vMaxX=-1,vMaxY=-1;
+   for(let y=0;y<crop.height;y++)for(let x2=0;x2<crop.width;x2++){
+    const srcX=x0+x2,srcY=y0+y,j=(y*crop.width+x2)*4;
+    if(cd[j+3]<=8)continue;
+    if(!belongs(srcX,srcY)){cd[j+3]=0;continue}
+    if(x2<vMinX)vMinX=x2;if(x2>vMaxX)vMaxX=x2;if(y<vMinY)vMinY=y;if(y>vMaxY)vMaxY=y
+   }
+   gg.putImageData(ci,0,0);
+
+   const visW=Math.max(1,vMaxX-vMinX+1),visH=Math.max(1,vMaxY-vMinY+1);
+   frames.push({img:crop,visW,visH,cx:(vMinX+vMaxX+1)/2,cy:(vMinY+vMaxY+1)/2});
+   rects.push([rx0+x0,ry0+y0,crop.width,crop.height])
   }
-  if(out.length===8)CLOUT_SPIN_FRAMES=out
- }catch(e){console.warn('Clout frame measurement fallback',e)}
+  if(frames.length===8){CLOUT_SPIN_FRAME_IMAGES=frames;CLOUT_SPIN_FRAMES=rects}
+ }catch(e){console.warn('Clout frame measurement fallback',e);CLOUT_SPIN_FRAME_IMAGES=[]}
 }
 const cloutTutorial={active:false};
 function cloutTutorialSeen(){try{return localStorage.getItem('fatnap.cloutTutorial.v1')==='1'}catch{return false}}
@@ -896,8 +964,9 @@ function drawBaldSparkles(px,py){
 }
 function baldBangFrame(){
  if(!baldBangOK||!baldBangFrames.length)return idleFrame();
- const i=BB.t<.18?0:BB.t<.40?1:BB.t<.62?2:3,frame=baldBangFrames[i],im=frame.img,targetBodyH=96,scale=targetBodyH/frame.bodyH,
-       dw=im.width*scale,dh=im.height*scale,px=P.x-S.cam+P.w/2,base=P.y+P.h+11.5;
+ const i=BB.t<.18?0:BB.t<.40?1:BB.t<.62?2:3,frame=baldBangFrames[i],im=frame.img,
+       ib=MOTION_BOUNDS["IDLE.png"],targetBodyH=(idle&&idle.naturalHeight&&ib)?(ib[3]-ib[1])*(96/idle.naturalHeight):92,
+       scale=targetBodyH/frame.bodyH,dw=im.width*scale,dh=im.height*scale,px=P.x-S.cam+P.w/2,base=P.y+P.h+11.5;
  x.save();x.translate(px,base);if(P.dir<0)x.scale(-1,1);x.drawImage(im,-frame.bodyCx*scale,-frame.bodyBottom*scale,dw,dh);x.restore();
  if(i===3)drawBaldSparkles(px,base-targetBodyH*.82)
 }
@@ -1612,9 +1681,15 @@ function drawCloutPickup(){
  if(px<-70||px>S.w+70)return;
  drawCloutPickupShine(px,py);
  if(cloutPickupSpinOK){
-  const fi=Math.floor(S.t*2.8)%CLOUT_SPIN_FRAMES.length,r=CLOUT_SPIN_FRAMES[fi],w=36,h=w*(r[3]/r[2]);
+  const fi=Math.floor(S.t*2.8)%CLOUT_SPIN_FRAMES.length,frame=CLOUT_SPIN_FRAME_IMAGES[fi];
   x.save();x.translate(px,py);x.shadowColor='rgba(255,238,120,.95)';x.shadowBlur=15;
-  x.drawImage(cloutPickupSpinSheet,r[0],r[1],r[2],r[3],-w/2,-h/2,w,h);x.restore()
+  if(frame&&frame.img){
+   const scale=36/frame.visW,dw=frame.img.width*scale,dh=frame.img.height*scale;
+   x.drawImage(frame.img,-frame.cx*scale,-frame.cy*scale,dw,dh)
+  }else{
+   const r=CLOUT_SPIN_FRAMES[fi],w=36,h=w*(r[3]/r[2]);x.drawImage(cloutPickupSpinSheet,r[0],r[1],r[2],r[3],-w/2,-h/2,w,h)
+  }
+  x.restore()
  }else{
   x.save();x.translate(px,py);x.shadowColor='rgba(255,238,120,.95)';x.shadowBlur=15;x.fillStyle='#fff';x.fillRect(-16,-5,32,10);x.restore()
  }
