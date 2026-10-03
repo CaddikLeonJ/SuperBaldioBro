@@ -2872,8 +2872,9 @@ function updateCamera(dt){
  S.cam+=(camTarget-S.cam)*(1-Math.pow(camEase,dt))
 }
 const motionStep=step;step=function(dt){
+ const recordX0=P.x;if(S.start&&!menuOpen&&!document.hidden){records.playTime+=dt;if(lightheadedT>0)records.timeLightHeaded+=dt;if(clout.powered)records.timeIn64280+=dt;if(P.run)records.timeRunning+=dt;if(P.crouch)records.timeCrouched+=dt;if(crawling())records.timeCrawling+=dt;recordsSaveClock+=dt;if(recordsSaveClock>=5){recordsSaveClock=0;schedulePlayerSave()}}
  if(clout.transforming){P.hemmergy=P.maxHemmergy;hemmergyTired=false;lightheadedT=0;updateClout(dt);updateCamera(dt);lastCrawlX=P.x;return}
- motionStep(dt);
+ motionStep(dt);records.distanceTravelled+=Math.abs(P.x-recordX0);
  updateClout(dt);
  updateCamera(dt);
  if(clout.powered){P.hemmergy=P.maxHemmergy;hemmergyTired=false;lightheadedT=0;}
@@ -2921,5 +2922,6 @@ document.addEventListener('pointerdown',recoverGameAudio,{capture:true,passive:t
 document.addEventListener('touchend',recoverGameAudio,{capture:true,passive:true});
 document.addEventListener('keydown',recoverGameAudio,{capture:true});
 addEventListener('pageshow',()=>{if(!document.hidden)recoverGameAudio()});
-addEventListener('resize',resize);visualViewport?.addEventListener('resize',resize);resize();requestAnimationFrame(loop)})();</script></body></html>
+addEventListener('resize',resize);visualViewport?.addEventListener('resize',resize);resize();requestAnimationFrame(loop)})();addEventListener('pagehide',writePlayerSave);addEventListener('visibilitychange',()=>{if(document.hidden)writePlayerSave()});
+</script></body></html>
 
