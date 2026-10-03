@@ -111,7 +111,7 @@ function refillSoundtrackRotation(){
 }
 function playSoundtrackIndex(i,record=true){
  if(!soundtrackAllowedInCurrentMode(i))return false;
- soundtrackLast=i;soundtrackFirst=false;soundtrackNoticePending=true;hideNowPlaying();
+ soundtrackLast=i;soundtrackFirst=false;soundtrackNoticePending=true;hideNowPlaying();addRecord('songsPlayed');songStat(i).plays++;schedulePlayerSave();
  if(record){if(soundtrackHistoryPos<soundtrackHistory.length-1)soundtrackHistory=soundtrackHistory.slice(0,soundtrackHistoryPos+1);soundtrackHistory.push(i);soundtrackHistoryPos=soundtrackHistory.length-1}
  soundtrack.src='https://raw.githubusercontent.com/CaddikLeonJ/SuperBaldioBro/main/'+encodeURI(SOUNDTRACK_FILES[i]);
  soundtrack.play().catch(()=>{});
@@ -145,7 +145,6 @@ function enterGameplaySoundtrack(){
  }else nextSoundtrack()
 }
 soundtrack.addEventListener('playing',()=>{
- if(soundtrackLast>=0){addRecord('songsPlayed');songStat(soundtrackLast).plays++;schedulePlayerSave()}
  if(soundtrackNoticePending){
   soundtrackNoticePending=false;showNowPlaying(SOUNDTRACK_FILES[soundtrackLast])
  }
@@ -880,6 +879,7 @@ function updateEnemyCorpses(dt){
     b.vy=0;b.av=0;b.settled=true
    }
   }else{b.settled=false;b.support=null}
+  if(b.settled&&b.support&&!b.recordStacked){b.recordStacked=true;addRecord('squirrelCorpsesStacked');let depth=1,q=b,seen=new Set();while(q&&q.support&&!seen.has(q)){seen.add(q);depth++;q=q.support}records.highestSquirrelCorpseStack=Math.max(records.highestSquirrelCorpseStack||0,depth);schedulePlayerSave()}
  }
 }
 let playerCorpseSupport=null,corpseDropCooldown=0,corpseJumpTakeoffY=null;
