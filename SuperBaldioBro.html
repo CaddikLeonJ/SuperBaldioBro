@@ -40,7 +40,7 @@ function showNowPlaying(file){
  const i=SOUNDTRACK_FILES.indexOf(file);if(i<0)return;
  hideNowPlaying();nowPlayingTitle.textContent=SOUNDTRACK_TITLES[i];
  const soundtrackPanel=document.getElementById('soundtrack-menu');
- if(menuOpen||(soundtrackPanel&&!soundtrackPanel.hidden))return;
+ if(soundtrackPanel&&!soundtrackPanel.hidden)return;
  nowPlayingPopup.style.visibility='visible';
  // 0.6 seconds in, 10 seconds readable, 0.8 seconds out.
  const animation=nowPlayingPopup.animate([
