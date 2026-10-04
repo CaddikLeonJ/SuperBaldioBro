@@ -395,7 +395,7 @@ function lightheadedFrame(){const elapsed=lightheadedDuration-lightheadedT,frame
 function headMoveFx(){}
 function headFx(){if(headFxT<=0)return;const p=1-headFxT/.16,alpha=1-p,px=P.x-S.cam+P.w/2+P.dir*18,py=P.y+P.h*.22;x.save();x.translate(px,py);if(P.dir<0)x.scale(-1,1);x.globalAlpha=alpha;x.strokeStyle='#fff3c4';x.lineWidth=4*(1-p)+1;x.beginPath();x.arc(0,0,12+p*30,-.9,.9);x.stroke();x.strokeStyle='#ffd36a';x.lineWidth=3;for(let i=-2;i<=2;i++){const a=i*.34,len=24+p*34;x.beginPath();x.moveTo(8,Math.sin(a)*7);x.lineTo(8+Math.cos(a)*len,Math.sin(a)*len);x.stroke()}x.restore()}
 function player(){if(lightheadedT>0){if(lightOK)lightheadedFrame();else ph();return}if(headActive&&headOK){headFrame();return}if(crouchState==='downing'||crouchState==='uping'){if(crouchOK)crouchFrame();else ph();return}if(crouchState==='down'){if(crawlHeld()&&Math.abs(P.vx)>1&&crawlOK)crawlFrame();else if(crouchOK)crouchFrame();else ph();return}if(jumpPrep||!P.ground){if(jumpOK)jumpFrame();else ph();return}if(idleNow()&&idleOK){idleFrame();return}if(P.run&&P.ground&&!P.crouch&&runOK){runFrame();return}if(walkNow()&&walkOK){walkFrame();return}ph()}function controls(){const panelH=S.h-S.cy;x.fillStyle='#0b0e16';x.fillRect(0,S.cy,S.w,panelH);x.fillStyle='rgba(255,255,255,.04)';x.fillRect(0,S.cy,S.w,1);x.save();x.shadowColor='rgba(0,0,0,.55)';x.shadowBlur=14;x.fillStyle='#111621';x.strokeStyle='#3d465b';x.lineWidth=3;x.beginPath();x.arc(U.jx,U.jy,U.jr,0,Math.PI*2);x.fill();x.stroke();x.shadowBlur=0;x.strokeStyle='#252c3b';x.lineWidth=2;x.beginPath();x.arc(U.jx,U.jy,U.jr-9,0,Math.PI*2);x.stroke();const kx=U.jx+I.mx*U.jr*.52,ky=U.jy+I.my*U.jr*.52;x.shadowColor='rgba(0,0,0,.65)';x.shadowBlur=9;x.shadowOffsetY=5;x.fillStyle='#343d51';x.strokeStyle='#758099';x.lineWidth=2;x.beginPath();x.arc(kx,ky,U.kr+3,0,Math.PI*2);x.fill();x.stroke();x.shadowBlur=0;x.shadowOffsetY=0;x.fillStyle='rgba(255,255,255,.12)';x.beginPath();x.ellipse(kx-6,ky-7,10,6,-.4,0,Math.PI*2);x.fill();x.restore();function btn(cx,cy,r,label,fill,stroke,pressed,fs){const dy=pressed?5:0;x.save();x.fillStyle='#080b11';x.beginPath();x.arc(cx,cy+6,r+3,0,Math.PI*2);x.fill();x.shadowColor='rgba(0,0,0,.5)';x.shadowBlur=pressed?2:9;x.shadowOffsetY=pressed?1:5;x.fillStyle=fill;x.strokeStyle=stroke;x.lineWidth=3;x.beginPath();x.arc(cx,cy+dy,r,0,Math.PI*2);x.fill();x.stroke();x.shadowBlur=0;x.shadowOffsetY=0;if(!pressed){x.fillStyle='rgba(255,255,255,.13)';x.beginPath();x.ellipse(cx-8,cy-10,r*.42,r*.18,-.35,0,Math.PI*2);x.fill()}x.fillStyle='#f5f7ff';x.font='700 '+fs+'px Arial';x.textAlign='center';x.textBaseline='middle';x.fillText(label,cx,cy+dy);x.restore()}btn(U.bx,U.by,U.br,'JUMP','#263e67','#6486bd',I.jumpDown,12);btn(U.ax,U.ay,U.ar,'HEADBUTT','#562d38','#9b596a',I.headDown,9);x.fillStyle='#747e95';x.font='10px Arial';x.textAlign='center';x.textBaseline='alphabetic';x.fillText('MOVE',U.jx,U.jy+U.jr+18)}function hud(){x.fillStyle='rgba(7,9,16,.72)';x.fillRect(0,0,S.w,32);x.fillStyle='#fff';x.font='700 13px Arial';x.textAlign='left';x.fillText('SUPER BALDIO BRO. — v0.4.159',10,20);x.fillStyle='#b9bfd2';x.font='11px Arial';x.textAlign='right';x.fillText(idleNow()?'IDLE ✓':P.run?'RUN':P.crouch?'CROUCH':'WALK ✓',S.w-10,20)}function overlay(){}function render(){x.setTransform(S.d,0,0,S.d,0,0);x.fillStyle='#070910';x.fillRect(0,0,S.w,S.h);room();player();hud();controls();overlay()}function loop(t){const dt=Math.min((t-S.last)/1000,.033);S.last=t;S.t+=dt;S.acc+=dt;while(S.acc>=1/120){if(S.start)step(1/120);S.acc-=1/120}render();requestAnimationFrame(loop)}function pos(e){const r=c.getBoundingClientRect();return{x:(e.clientX-r.left)*S.w/r.width,y:(e.clientY-r.top)*S.h/r.height}}const inc=(a,b,cx,cy,r)=>{const dx=a-cx,dy=b-cy;return dx*dx+dy*dy<=r*r};function joy(a,b){let dx=a-U.jx,dy=b-U.jy,d=Math.hypot(dx,dy);if(d>U.jr){dx*=U.jr/d;dy*=U.jr/d}I.mx=cl(dx/U.jr,-1,1);I.my=cl(dy/U.jr,-1,1)}// v0.3.0: held attacks and three-slot loadout. All implemented moves are unlocked.
-const VERSION='0.4.169', ASSET_ROOT='https://raw.githubusercontent.com/CaddikLeonJ/SuperBaldioBro/2ff154de90a9d97d1864876ad733c0eba49e8d6b/';
+const VERSION='0.4.170', ASSET_ROOT='https://raw.githubusercontent.com/CaddikLeonJ/SuperBaldioBro/2ff154de90a9d97d1864876ad733c0eba49e8d6b/';
 const MOVES={
  headbutt:{name:'Headbutt',description:'Tap to smash forward for 50 damage. Briefly stuns enemies, knocks them back, and protects Fat Nap from frontal hits during the impact window.'},
  fart:{name:'Fart',description:'Hold the Fart button and drag it to aim the gas. Fat Nap stays planted while farting. Deals 30 damage per second and slows non-boss enemies by 50%, reducing them to half speed while the gas keeps hitting them.'},
@@ -823,35 +823,27 @@ function corpseOutline(body){
 // Match the visible ground baseline used by live squirrels and Fat Nap.
 function corpseGroundY(){return fy()+22}
 function corpseBottomOffset(body){
- const outline=corpseOutline(body),full=Math.max(...outline.map(p=>p[1])),shape=corpseShape(body);
- if(!shape)return full;
- // At rest, use whichever broad body surface is physically underneath:
- // belly when face-down, back when the ragdoll finishes on its back.
- const scale=body.drawH/shape.bh,sy=body.squashY||1,
-       belly=(shape.bellyY-shape.by-shape.bh/2)*scale*sy,
-       back=-(shape.backY-shape.by-shape.bh/2)*scale*sy,
-       a=Math.atan2(Math.sin(body.angle),Math.cos(body.angle)),
-       frontFit=cl(1-Math.abs(a)/.38,0,1),
-       backFit=cl(1-Math.abs(Math.PI-Math.abs(a))/.38,0,1),
-       fit=Math.max(frontFit,backFit),
-       contact=frontFit>=backFit?belly:back;
- return full+(contact-full)*fit
+ const outline=corpseOutline(body);
+ return outline.length?Math.max(...outline.map(p=>p[1])):corpseEffectiveH(body)*.5
 }
 function corpseTopSurfaceY(body,worldX){
- // The walkable surface is whichever broad side of the squirrel is facing up.
- // Belly-down => back is the floor. Back-down => belly is the floor.
- if(Math.abs(worldX-body.x)>body.w*.42)return null;
- const shape=corpseShape(body),a=Math.atan2(Math.sin(body.angle),Math.cos(body.angle));
- if(shape&&body.settled){
-  const scale=body.drawH/shape.bh,sy=body.squashY||1,
-        backLocal=(shape.backY-shape.by-shape.bh/2)*scale*sy,
-        bellyLocal=(shape.bellyY-shape.by-shape.bh/2)*scale*sy,
-        mostlyFlat=Math.abs(Math.sin(a))<.38;
-  if(mostlyFlat)return body.y+(Math.cos(a)>=0?backLocal:-bellyLocal)
+ // Use the actual upper outline of the rendered squirrel at this X.
+ // This automatically makes the back walkable when belly-down and the belly
+ // walkable when the ragdoll lands on its back.
+ if(!body||Math.abs(worldX-body.x)>body.w*.42)return null;
+ const poly=corpseOutline(body);if(poly.length<2)return null;
+ const lx=worldX-body.x;let best=Infinity;
+ for(let i=0;i<poly.length;i++){
+  const a=poly[i],b=poly[(i+1)%poly.length],
+        lo=Math.min(a[0],b[0]),hi=Math.max(a[0],b[0]);
+  if(lx<lo-.01||lx>hi+.01)continue;
+  const dx=b[0]-a[0];
+  if(Math.abs(dx)<.001){best=Math.min(best,a[1],b[1]);continue}
+  const t=cl((lx-a[0])/dx,0,1),yy=a[1]+(b[1]-a[1])*t;
+  if(yy<best)best=yy
  }
- // While still rotating, use the actual upper edge of the rotated silhouette.
- const outline=corpseOutline(body);if(!outline.length)return null;
- return body.y+Math.min(...outline.map(p=>p[1]))
+ if(!Number.isFinite(best))return null;
+ return body.y+best
 }
 function corpseUnderlyingSurfaceY(body,worldX){
  let surface=corpseGroundY(),idx=enemyCorpses.indexOf(body);
@@ -864,17 +856,37 @@ function corpseUnderlyingSurfaceY(body,worldX){
  }
  return surface
 }
+function corpseRestTilt(body){
+ if(!body||!body.settled&&body.vy!==0)return 0;
+ const span=Math.max(24,body.w*.62),leftX=body.x-span*.5,rightX=body.x+span*.5,
+       leftY=corpseUnderlyingSurfaceY(body,leftX),rightY=corpseUnderlyingSurfaceY(body,rightX),
+       slope=cl(Math.atan2(rightY-leftY,span),-.38,.38),
+       base=Number.isFinite(body.restAngle)?body.restAngle:0;
+ // A back-down corpse has its local left/right reversed by the 180° rest angle,
+ // so reverse the added tilt to keep the WORLD body sloping toward the lower side.
+ return base+slope*(Math.cos(base)>=0?1:-1)
+}
+function corpseRestY(body){
+ const outline=corpseOutline(body);if(!outline.length)return corpseGroundY()-corpseBottomOffset(body);
+ let best=Infinity;
+ for(const p of outline){
+  const supportY=corpseUnderlyingSurfaceY(body,body.x+p[0]),
+        candidate=supportY-p[1];
+  if(candidate<best)best=candidate
+ }
+ return Number.isFinite(best)?best:corpseGroundY()-corpseBottomOffset(body)
+}
 function corpseDeformSag(body,worldX){
  if(!body||!body.settled||!body.support)return 0;
+ // Rotation now does the heavy lifting. Keep only a very small soft bend so
+ // overhanging fur/body follows the lower surface without looking sliced apart.
  const centreSurface=corpseUnderlyingSurfaceY(body,body.x),
-       step=Math.max(1.5,body.w*.028),
-       weights=[1,2,3,4,3,2,1],
-       maxSag=Math.min(20,Math.max(5,corpseEffectiveH(body)*.26));
+       step=Math.max(1.5,body.w*.025),weights=[1,2,3,4,3,2,1],maxSag=4.5;
  let sum=0,weight=0;
  for(let i=-3;i<=3;i++){
-  const localSurface=corpseUnderlyingSurfaceY(body,worldX+i*step),
-        raw=cl(Math.max(0,localSurface-centreSurface),0,maxSag),
-        q=raw/maxSag,smooth=maxSag*(q*q*(3-2*q)),w=weights[i+3];
+  const local=corpseUnderlyingSurfaceY(body,worldX+i*step),
+        q=cl(Math.max(0,local-centreSurface)/maxSag,0,1),
+        smooth=maxSag*(q*q*(3-2*q)),w=weights[i+3];
   sum+=smooth*w;weight+=w
  }
  return sum/Math.max(1,weight)
@@ -924,32 +936,36 @@ function updateEnemyCorpses(dt){
    b.x+=b.vx*dt;b.y+=b.vy*dt;b.angle+=b.av*dt;
    b.vx*=Math.pow(.994,dt*60);b.av*=Math.pow(.993,dt*60)
   }else{
-   // Relax toward the ragdoll's chosen final orientation: front or back.
-   const target=Number.isFinite(b.restAngle)?b.restAngle:0,
-         delta=Math.atan2(Math.sin(b.angle-target),Math.cos(b.angle-target));
-   b.angle=target+delta*Math.exp(-dt*8);
    b.vx*=Math.exp(-dt*12);b.x+=b.vx*dt
   }
   b.x=cl(b.x,b.w*.5,S.ww-b.w*.5);
   let support=null,surface=corpseGroundY();
   for(let j=0;j<i;j++){
    const other=enemyCorpses[j];
-   if(!other.settled||corpseHorizontalOverlap(b,other)<.20)continue;
-   const top=corpseTopSurfaceY(other,cl(b.x,other.x-other.w*.38,other.x+other.w*.38));
+   if(!other.settled||corpseHorizontalOverlap(b,other)<.16)continue;
+   const probeX=cl(b.x,other.x-other.w*.38,other.x+other.w*.38),
+         top=corpseTopSurfaceY(other,probeX);
    if(top===null||top>=surface)continue;
-   // Rotation can carry the sprite's lowest point past the platform between frames.
-   // Older overlapping bodies remain support even after that crossing.
    support=other;surface=top
   }
   const bottom=b.y+corpseBottomOffset(b);
-  if(wasSettled&&(b.support===support||Math.abs(previousBottom-surface)<14)){
-   b.y=surface-corpseBottomOffset(b);b.vy=0;b.av=0;b.support=support;b.settled=true
+  if(wasSettled&&(b.support===support||Math.abs(previousBottom-surface)<18)){
+   b.support=support;b.settled=true;b.vy=0;b.av=0;
+   const target=corpseRestTilt(b),
+         delta=Math.atan2(Math.sin(b.angle-target),Math.cos(b.angle-target));
+   b.angle=target+delta*Math.exp(-dt*7.5);
+   b.y=corpseRestY(b)
   }else if(bottom>=surface&&b.vy>=0){
-   b.y=surface-corpseBottomOffset(b);b.support=support;
+   b.support=support;
    if(b.vy>100&&b.bounces<(b.bounceLimit??2)){
+    b.y=surface-corpseBottomOffset(b);
     b.vy=-b.vy*(b.bounceDamp??.26);b.vx*=.65;b.av*=.60;b.bounces++;b.settled=false
    }else{
-    b.vy=0;b.av=0;b.settled=true
+    b.vy=0;b.av=0;b.settled=true;
+    const target=corpseRestTilt(b),
+          delta=Math.atan2(Math.sin(b.angle-target),Math.cos(b.angle-target));
+    b.angle=target+delta*.28;
+    b.y=corpseRestY(b)
    }
   }else{b.settled=false;b.support=null}
   if(b.settled&&b.support&&!b.recordStacked){b.recordStacked=true;addRecord('squirrelCorpsesStacked');let depth=1,q=b,seen=new Set();while(q&&q.support&&!seen.has(q)){seen.add(q);depth++;q=q.support}records.highestSquirrelCorpseStack=Math.max(records.highestSquirrelCorpseStack||0,depth);schedulePlayerSave()}
@@ -963,7 +979,7 @@ function corpseSurfaceForPlayer(body,worldX){
  if(Math.abs(worldX-body.x)>body.w*.40)return null;
  let top=corpseTopSurfaceY(body,worldX);
  if(top===null)return null;
- top+=corpseDeformSag(body,worldX)*.70;
+ top+=corpseDeformSag(body,worldX);
  top=Math.min(top,fy());
  // Once 6'4 280 has flattened a squirrel to floor height, treat it as floor
  // rather than a separate platform so the powered sprite cannot shift anchors.
@@ -1042,8 +1058,8 @@ function drawSquirrelCorpse(body){
   if(canBend){
    // Many narrow, generously overlapping slices plus a smoothed sag curve make
    // the deformation read as one flexible body instead of visible chopped strips.
-   const strips=48,sw=frame.img.width/strips,ca=Math.cos(body.angle),sa=Math.sin(body.angle),dir=body.dir||1,
-         sourceOverlap=Math.min(.65,sw*.10),destOverlap=Math.max(1.35,scale*sourceOverlap*2.2);
+   const strips=72,sw=frame.img.width/strips,ca=Math.cos(body.angle),sa=Math.sin(body.angle),dir=body.dir||1,
+         sourceOverlap=Math.min(.85,sw*.20),destOverlap=Math.max(1.8,scale*sourceOverlap*2.8);
    for(let k=0;k<strips;k++){
     const sourceX=Math.max(0,k*sw-sourceOverlap),
           sourceEnd=Math.min(frame.img.width,(k+1)*sw+sourceOverlap),
@@ -1763,8 +1779,9 @@ function baldBangFrame(){
        px=P.x-S.cam+P.w/2,base=P.y+P.h+11.5;
 
  x.save();x.translate(px,base);if(P.dir<0)x.scale(-1,1);
- x.drawImage(im,-frame.bodyCx*scale,-frame.bodyBottom*scale,dw,dh);
- recordFatNapMouthLocal(targetBodyH*finalFrameFix*.14,-targetBodyH*finalFrameFix*.71,targetBodyH*finalFrameFix/96);
+ const bbX=-frame.bodyCx*scale,bbY=-frame.bodyBottom*scale;
+ x.drawImage(im,bbX,bbY,dw,dh);
+ recordFatNapMouthFromImage(im,bbX,bbY,scale,scale,null,'baldBang');
  x.restore();
 
  // Frame 4 is the fully bald pose. Hold its glare until the reverse starts.
@@ -2176,14 +2193,89 @@ function koFx(){
  x.restore()
 }
 let lightheadedBreathTailUntil=0,lightheadedBreathTailStart=0,lightheadedBreathTailX=0,lightheadedBreathTailY=0,lightheadedBreathTailDir=1,lightheadedBreathTailScale=1;
+const fatNapMouthDetectCache=new WeakMap();
+const FAT_NAP_MOUTH_TUNE={
+ idle:{dx:0,dy:0},walk:{dx:0,dy:0},run:{dx:0,dy:0},jump:{dx:0,dy:0},
+ crouch:{dx:0,dy:0},crawl:{dx:0,dy:0},head:{dx:0,dy:0},fart:{dx:0,dy:0},
+ light:{dx:0,dy:0},baldBang:{dx:0,dy:0},powered:{dx:0,dy:0},ko:{dx:0,dy:0}
+};
+function detectFatNapMouthAnchor(im,bounds=null,sourceRect=null){
+ if(!im)return null;
+ let perImage=fatNapMouthDetectCache.get(im);
+ if(!perImage){perImage=new Map();fatNapMouthDetectCache.set(im,perImage)}
+ const key=(sourceRect?sourceRect.join(','):'full')+'|'+(bounds?bounds.join(','):'auto');
+ if(perImage.has(key))return perImage.get(key);
+ try{
+  const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;if(!iw||!ih)return null;
+  const sr=sourceRect||[0,0,iw,ih],bx=bounds?bounds[0]:sr[0],by=bounds?bounds[1]:sr[1],
+        br=bounds?bounds[2]:sr[0]+sr[2],bb=bounds?bounds[3]:sr[1]+sr[3],
+        bw=Math.max(1,br-bx),bh=Math.max(1,bb-by),
+        faceTop=by,faceBottom=by+bh*.50,max=280,s=Math.min(1,max/Math.max(sr[2],sr[3])),
+        cw=Math.max(1,Math.round(sr[2]*s)),ch=Math.max(1,Math.round(sr[3]*s)),
+        oc=document.createElement('canvas');oc.width=cw;oc.height=ch;
+  const g=oc.getContext('2d',{willReadFrequently:true});
+  g.drawImage(im,sr[0],sr[1],sr[2],sr[3],0,0,cw,ch);
+  const d=g.getImageData(0,0,cw,ch).data,mask=new Uint8Array(cw*ch),seen=new Uint8Array(cw*ch);
+  const sx=v=>(v-sr[0])*s,sy=v=>(v-sr[1])*s;
+  const x0=cl(Math.floor(sx(bx)),0,cw-1),x1=cl(Math.ceil(sx(br)),0,cw),
+        y0=cl(Math.floor(sy(faceTop)),0,ch-1),y1=cl(Math.ceil(sy(faceBottom)),0,ch);
+  for(let yy=y0;yy<y1;yy++)for(let xx=x0;xx<x1;xx++){
+   const p=(yy*cw+xx)*4,r=d[p],gg=d[p+1],bl=d[p+2],a=d[p+3];
+   if(a>55&&r>105&&gg>58&&bl>45&&r>gg*1.08&&r>bl*1.07&&(r-Math.min(gg,bl))>12)mask[yy*cw+xx]=1
+  }
+  let best=null;
+  for(let p=0;p<mask.length;p++){
+   if(!mask[p]||seen[p])continue;
+   const q=[p];seen[p]=1;let minX=cw,minY=ch,maxX=-1,maxY=-1;
+   for(let z=0;z<q.length;z++){
+    const n=q[z],xx=n%cw,yy=(n/cw)|0;minX=Math.min(minX,xx);maxX=Math.max(maxX,xx);minY=Math.min(minY,yy);maxY=Math.max(maxY,yy);
+    for(let oy=-1;oy<=1;oy++)for(let ox=-1;ox<=1;ox++){
+     const nx=xx+ox,ny=yy+oy;if(nx<0||nx>=cw||ny<0||ny>=ch)continue;
+     const k=ny*cw+nx;if(mask[k]&&!seen[k]){seen[k]=1;q.push(k)}
+    }
+   }
+   const fw=maxX-minX+1,fh=maxY-minY+1,area=q.length,
+         centrePenalty=Math.abs((minX+maxX)*.5-(x0+x1)*.5)*.35,
+         score=area+fw*fh*.16-centrePenalty;
+   if(fw>3&&fh>4&&(!best||score>best.score))best={minX,minY,maxX,maxY,score}
+  }
+  let ax=bx+bw*.56,ay=by+bh*.285;
+  if(best){
+   const fx0=best.minX,fx1=best.maxX,fy0=best.minY,fy1=best.maxY,fh=Math.max(1,fy1-fy0+1),
+         scanY0=Math.floor(fy0+fh*.44),scanY1=Math.floor(fy0+fh*.82),
+         scanX0=Math.floor(fx0+(fx1-fx0)*.12),scanX1=Math.ceil(fx1-(fx1-fx0)*.12);
+   let bestRow=-1,bestCount=0,bestSum=0;
+   for(let yy=scanY0;yy<=scanY1;yy++){
+    let count=0,sumX=0;
+    for(let xx=scanX0;xx<=scanX1;xx++){
+     const p=(yy*cw+xx)*4,r=d[p],gg=d[p+1],bl=d[p+2],a=d[p+3],
+           lum=(r+gg+bl)/3;
+     if(a>80&&lum<92){count++;sumX+=xx}
+    }
+    if(count>bestCount){bestCount=count;bestRow=yy;bestSum=sumX}
+   }
+   const faceCX=(fx0+fx1)*.5,faceCY=(fy0+fy1)*.5;
+   ax=sr[0]+((bestCount>=2?bestSum/bestCount:faceCX)/s);
+   ay=sr[1]+(((bestRow>=0?bestRow+fh*.055:faceCY+fh*.18))/s);
+  }
+  const out={x:ax,y:ay};perImage.set(key,out);return out
+ }catch(e){return null}
+}
+function mouthTune(kind){return FAT_NAP_MOUTH_TUNE[kind]||FAT_NAP_MOUTH_TUNE.idle}
 let fatNapRenderedMouth={valid:false,x:0,y:0,scale:1,rotation:0};
-function recordFatNapMouthLocal(localX,localY,visualScale=1){
- const m=x.getTransform(),d=S.d||1,
-       px=(m.a*localX+m.c*localY+m.e)/d,
-       py=(m.b*localX+m.d*localY+m.f)/d,
+function recordFatNapMouthLocal(localX,localY,visualScale=1,kind='idle'){
+ const t=mouthTune(kind),m=x.getTransform(),d=S.d||1,
+       lx=localX+t.dx,ly=localY+t.dy,
+       px=(m.a*lx+m.c*ly+m.e)/d,
+       py=(m.b*lx+m.d*ly+m.f)/d,
        canvasScale=(Math.hypot(m.a,m.b)+Math.hypot(m.c,m.d))/(2*d),
        rotation=Math.atan2(-m.c,m.d);
  fatNapRenderedMouth={valid:true,x:px,y:py,scale:Math.max(.55,visualScale*canvasScale),rotation}
+}
+function recordFatNapMouthFromImage(im,drawX,drawY,scaleX,scaleY,bounds=null,kind='idle',sourceRect=null){
+ const a=detectFatNapMouthAnchor(im,bounds,sourceRect);if(!a)return;
+ const sx=sourceRect?sourceRect[0]:0,sy=sourceRect?sourceRect[1]:0;
+ recordFatNapMouthLocal(drawX+(a.x-sx)*scaleX,drawY+(a.y-sy)*scaleY,Math.max(.65,(Math.abs(scaleX)+Math.abs(scaleY))*24),kind)
 }
 function drawFatNapMouthShape(mx,my,level,scale=1,rotation=0){
  if(level<=.025)return;
@@ -2311,17 +2403,25 @@ let crawlDistance=0,lastCrawlX=P.x,nextCrawlSfxAt=5,crawlSfxSide=0;
 function crawling(){return P.ground&&P.crouch&&crouchState==='down'&&Math.abs(I.mx)>.1&&Math.abs(P.vx)>1&&lightheadedT<=0&&!F.active&&!headActive}
 const IDLE_REFERENCE_BOUNDS=[1097,53,1909,2196];
 const MOTION_BOUNDS={"FAT NAP SPRITES (CHARACTER MODELS) - 37.png": [761, 55, 2243, 1349], "FAT NAP SPRITES (CHARACTER MODELS) - 32.png": [1060, 474, 1944, 2197], "FAT NAP SPRITES (CHARACTER MODELS) - 23.png": [533, 460, 2467, 2196], "FAT NAP SPRITES (CHARACTER MODELS) - 29.png": [859, 293, 2138, 2197], "FAT NAP SPRITES (CHARACTER MODELS) - 33.png": [1019, 946, 1989, 2197], "FAT NAP SPRITES (CHARACTER MODELS) - 27.png": [1064, 54, 1931, 2197], "FAT NAP SPRITES (CHARACTER MODELS) - 6.png": [731, 53, 2266, 2200], "FAT NAP SPRITES (CHARACTER MODELS) - 16.png": [789, 54, 2210, 2194], "FAT NAP SPRITES (CHARACTER MODELS) - 41.png": [996, 463, 2017, 2191], "FAT NAP SPRITES (CHARACTER MODELS) - 5.png": [1180, 51, 1826, 2197], "FAT NAP SPRITES (CHARACTER MODELS) - 26.png": [1074, 54, 1924, 2197], "FAT NAP SPRITES (CHARACTER MODELS) - 13.png": [639, 51, 2403, 2196], "FAT NAP SPRITES (CHARACTER MODELS) - 40.png": [982, 373, 2024, 2197], "FAT NAP SPRITES (CHARACTER MODELS) - 28.png": [966, 76, 2194, 2194], "FAT NAP SPRITES (CHARACTER MODELS) - 22.png": [741, 220, 2265, 2193], "FAT NAP SPRITES (CHARACTER MODELS) - 35.png": [937, 943, 2071, 2194], "FAT NAP SPRITES (CHARACTER MODELS) - 21.png": [974, 53, 2022, 2192], "FAT NAP SPRITES (CHARACTER MODELS) - 31.png": [1124, 54, 1877, 2198], "FAT NAP SPRITES (CHARACTER MODELS) - 36.png": [949, 382, 2050, 1971], "FAT NAP SPRITES (CHARACTER MODELS) - 42.png": [1118, 69, 1879, 2204], "FAT NAP SPRITES (CHARACTER MODELS) - 4.png": [734, 51, 2263, 2196], "FAT NAP SPRITES (CHARACTER MODELS) - 7.png": [1170, 51, 1831, 2198], "FAT NAP SPRITES (CHARACTER MODELS) - 15.png": [491, 53, 2504, 2194], "FAT NAP SPRITES (CHARACTER MODELS).png": [1097, 23, 1909, 2196], "FAT NAP SPRITES (CHARACTER MODELS) - 24.png": [967, 61, 2034, 2197], "FAT NAP SPRITES (CHARACTER MODELS) - 14.png": [793, 53, 2209, 2195]};
+function fatNapSpriteKind(file){
+ if(/ - (4|5|6|7)\.png$/.test(file))return 'walk';
+ if(/ - (13|14|15|16)\.png$/.test(file))return 'run';
+ if(/ - (21|22|23|24)\.png$/.test(file))return 'head';
+ if(/ - (26|27|28|29)\.png$/.test(file))return 'fart';
+ if(/ - (31|32|33)\.png$/.test(file))return 'crouch';
+ if(/ - (35|36|37)\.png$/.test(file))return 'jump';
+ if(/ - (40|41|42)\.png$/.test(file))return 'light';
+ return 'idle'
+}
 function uniformSprite(im,dir=P.dir,size=1){
  if(!im||!im.complete||!im.naturalWidth)return ph();
  const file=decodeURIComponent(im.src.split('/').pop().split('?')[0]),b=MOTION_BOUNDS[file],
        scale=96*size/im.naturalHeight,anchor=b?b[3]:im.naturalHeight,
-       bx=b?b[0]:0,by=b?b[1]:0,bw=b?b[2]-b[0]:im.naturalWidth,bh=b?b[3]-b[1]:im.naturalHeight,
-       mouthSourceX=bx+bw*.715,mouthSourceY=by+bh*.275,
-       mouthLocalX=-im.naturalWidth*scale/2+mouthSourceX*scale,
-       mouthLocalY=-anchor*scale+mouthSourceY*scale;
+       drawX=-im.naturalWidth*scale/2,drawY=-anchor*scale,
+       bounds=b?[b[0],b[1],b[2],b[3]]:null,kind=fatNapSpriteKind(file);
  x.save();x.translate(P.x-S.cam+P.w/2,P.y+P.h+(P.ground&&!playerCorpseSupport?11.5:0));if(dir<0)x.scale(-1,1);
- x.drawImage(im,-im.naturalWidth*scale/2,-anchor*scale,im.naturalWidth*scale,im.naturalHeight*scale);
- recordFatNapMouthLocal(mouthLocalX,mouthLocalY,size);
+ x.drawImage(im,drawX,drawY,im.naturalWidth*scale,im.naturalHeight*scale);
+ recordFatNapMouthFromImage(im,drawX,drawY,scale,scale,bounds,kind);
  x.restore();
 }
 function koDeathFrame(){
@@ -2329,10 +2429,9 @@ function koDeathFrame(){
  const px=P.x-S.cam+P.w/2,py=fy()+11.5-rise+drop,rot=(P.dir<0?-1:1)*p*Math.PI*2.35;
  x.save();x.translate(px,py);x.rotate(rot);if(P.dir<0)x.scale(-1,1);
  if(idle&&idle.complete&&idle.naturalWidth){
-  const b=IDLE_REFERENCE_BOUNDS,scale=96/idle.naturalHeight,anchorY=b?b[3]:idle.naturalHeight,
-        bx=b[0],by=b[1],bw=b[2]-b[0],bh=b[3]-b[1];
-  x.drawImage(idle,-idle.naturalWidth*scale/2,-anchorY*scale,idle.naturalWidth*scale,idle.naturalHeight*scale);
-  recordFatNapMouthLocal(-idle.naturalWidth*scale/2+(bx+bw*.715)*scale,-anchorY*scale+(by+bh*.275)*scale,1)
+  const b=IDLE_REFERENCE_BOUNDS,scale=96/idle.naturalHeight,anchorY=b?b[3]:idle.naturalHeight,drawX=-idle.naturalWidth*scale/2,drawY=-anchorY*scale;
+  x.drawImage(idle,drawX,drawY,idle.naturalWidth*scale,idle.naturalHeight*scale);
+  recordFatNapMouthFromImage(idle,drawX,drawY,scale,scale,[b[0],b[1],b[2],b[3]],'ko')
  }else{
   x.fillStyle='#eceef2';x.fillRect(-12,-55,24,55);x.fillStyle='#e4b39f';x.beginPath();x.arc(0,-62,11,0,Math.PI*2);x.fill()
  }
@@ -2342,7 +2441,7 @@ idleFrame=function(){uniformSprite(idle)};
 sprite=function(im){uniformSprite(im)};
 proportionalSprite=function(im){uniformSprite(im)};
 crouchFrame=function(){let i=2;if(crouchState==='downing')i=crouchT<.06?0:crouchT<.12?1:2;else if(crouchState==='uping')i=crouchT<.06?2:crouchT<.12?1:0;uniformSprite(crouchImgs[i])};
-function crawlFrame(){const rects=[[590,277,896,633],[1563,332,863,564],[496,1166,895,633],[1480,1215,1031,553]],i=Math.floor(crawlDistance/10)%4,r=rects[i];const cb=MOTION_BOUNDS["FAT NAP SPRITES (CHARACTER MODELS) - 33.png"],baseH=crouchImgs[2]?.naturalHeight&&cb?(cb[3]-cb[1])*(96/crouchImgs[2].naturalHeight):54,scale=baseH/633,drawW=r[2]*scale,drawH=r[3]*scale;x.save();x.translate(P.x-S.cam+P.w/2,P.y+P.h+(P.ground&&!playerCorpseSupport?11.5:0));if(P.dir<0)x.scale(-1,1);x.drawImage(crawlSheet,r[0],r[1],r[2],r[3],-drawW/2,-drawH,drawW,drawH);recordFatNapMouthLocal(-drawW/2+drawW*.715,-drawH+drawH*.275,drawH/96);x.restore()}
+function crawlFrame(){const rects=[[590,277,896,633],[1563,332,863,564],[496,1166,895,633],[1480,1215,1031,553]],i=Math.floor(crawlDistance/10)%4,r=rects[i];const cb=MOTION_BOUNDS["FAT NAP SPRITES (CHARACTER MODELS) - 33.png"],baseH=crouchImgs[2]?.naturalHeight&&cb?(cb[3]-cb[1])*(96/crouchImgs[2].naturalHeight):54,scale=baseH/633,drawW=r[2]*scale,drawH=r[3]*scale,drawX=-drawW/2,drawY=-drawH;x.save();x.translate(P.x-S.cam+P.w/2,P.y+P.h+(P.ground&&!playerCorpseSupport?11.5:0));if(P.dir<0)x.scale(-1,1);x.drawImage(crawlSheet,r[0],r[1],r[2],r[3],drawX,drawY,drawW,drawH);recordFatNapMouthFromImage(crawlSheet,drawX,drawY,scale,scale,[r[0],r[1],r[0]+r[2],r[1]+r[3]],'crawl',r);x.restore()}
 walkFrame=function(){if(walkNow())walkDistance+=Math.abs(P.x-lastWalkX);else walkDistance=0;lastWalkX=P.x;const i=Math.floor(walkDistance/12)%4;if((i===0||i===2)&&i!==lastWalkSfxFrame)footstep(false);lastWalkSfxFrame=i;uniformSprite(walkImgs[i])};
 runFrame=function(){const i=Math.floor(S.t*10)%4;if((i===0||i===2)&&i!==lastRunSfxFrame)footstep(true);lastRunSfxFrame=i;uniformSprite(runImgs[i],P.dir,.92)};
 headFrame=function(){uniformSprite(headImgs[headT<.035?0:headT<.07?1:headT<.32?2:3],P.dir,(clout.powered||clout.detransforming)?1:(80/96))};
@@ -3028,10 +3127,9 @@ function poweredMotionSprite(im,targetVisibleH=96,targetVisibleW=targetVisibleH)
  const iw=im&&(im.naturalWidth||im.width),ih=im&&(im.naturalHeight||im.height);if(!iw||!ih)return ph();
  const b=getPoweredBounds(im)||{x:0,y:0,w:iw,h:ih,bottom:ih},scaleY=targetVisibleH/b.h,scaleX=targetVisibleW/b.h,dw=iw*scaleX,dh=ih*scaleY;
  const px=P.x-S.cam+P.w/2,base=P.y+P.h+(P.ground?15.5:4),anchorX=(b.x+b.w/2)*scaleX,anchorY=b.bottom*scaleY,
-       mouthLocalX=-anchorX+(b.x+b.w*.715)*scaleX,
-       mouthLocalY=-anchorY+(b.y+b.h*.275)*scaleY;
- x.save();x.translate(px,base);if(P.dir<0)x.scale(-1,1);x.drawImage(im,-anchorX,-anchorY,dw,dh);
- recordFatNapMouthLocal(mouthLocalX,mouthLocalY,targetVisibleH/96);
+       drawX=-anchorX,drawY=-anchorY;
+ x.save();x.translate(px,base);if(P.dir<0)x.scale(-1,1);x.drawImage(im,drawX,drawY,dw,dh);
+ recordFatNapMouthFromImage(im,drawX,drawY,scaleX,scaleY,[b.x,b.y,b.x+b.w,b.y+b.h],'powered');
  x.restore()
 }
 function poweredIdleFrame(){
