@@ -90,8 +90,8 @@ const POSES=[
 ];
 const el=id=>document.getElementById(id);
 const c=el("canvas"),x=c.getContext("2d"),cl=(v,a,b)=>Math.min(b,Math.max(a,v)),fatNapMouthDetectCache=new WeakMap();
-const st={kind:"crouch",i:0,dir:1,zoom:7,face:true,ready:false,img:null,anchor:null,W:0,H:0,ox:0,oy:0,original:{},changes:{},base:{},bounds:{},version:"",drag:false};
-const pose=()=>POSES.find(z=>z.id===st.kind),filename=()=>file(pose().ids[st.i]),key=()=>st.kind+"|"+filename(),orig=()=>st.original[key()]||{dx:0,dy:0},tune=()=>st.changes[key()]||orig(),base=()=>st.base[st.kind]||{dx:0,dy:0};
+const st={kind:"crouch",i:0,dir:1,zoom:7,face:true,selected:true,controlMode:"move",activePad:null,ready:false,img:null,anchor:null,W:0,H:0,ox:0,oy:0,original:{},changes:{},base:{},bounds:{},version:"",drag:false};
+const pose=()=>POSES.find(z=>z.id===st.kind),filename=()=>file(pose().ids[st.i]),key=()=>st.kind+"|"+filename(),orig=()=>({dx:0,dy:0,w:1,h:1,...(st.original[key()]||{})}),tune=()=>({...orig(),...(st.changes[key()]||{})}),base=()=>st.base[st.kind]||{dx:0,dy:0};
 const num=v=>Math.round(v*4)/4;
 function params(){if(!st.ready)return null;const im=st.img,b=st.bounds[filename()],s=96*pose().size/im.naturalHeight;
  return{s:s,x:-im.naturalWidth*s/2,y:-(b?b[3]:im.naturalHeight)*s,w:im.naturalWidth*s,h:im.naturalHeight*s}}
@@ -112,7 +112,7 @@ function draw(){
  if(st.ready){const p=params(),a=autoMouth();x.save();if(st.dir<0)x.scale(-1,1);
  x.drawImage(st.img,p.x,p.y,p.w,p.h);
  if(a){x.strokeStyle="#6ad6ff";x.lineWidth=1.5/z;x.beginPath();x.arc(a.x,a.y,7/z,0,2*Math.PI);x.moveTo(a.x-11/z,a.y);x.lineTo(a.x+11/z,a.y);x.moveTo(a.x,a.y-11/z);x.lineTo(a.x,a.y+11/z);x.stroke()}
- if(m){const mw=(641*(82/1027))*.095,mh=1.15+.7*3.9;x.fillStyle="#351414";x.beginPath();x.ellipse(m.x,m.y,mw/2,mh/2,0,0,2*Math.PI);x.fill();x.fillStyle="#d97878";x.beginPath();x.ellipse(m.x,m.y+mh*.12,mw*.28,mh*.18,0,0,2*Math.PI);x.fill();x.strokeStyle="#ff65a3";x.lineWidth=1.6/z;x.beginPath();x.arc(m.x,m.y,11/z,0,2*Math.PI);x.moveTo(m.x-18/z,m.y);x.lineTo(m.x+18/z,m.y);x.moveTo(m.x,m.y-18/z);x.lineTo(m.x,m.y+18/z);x.stroke()}
+ if(m){const mw=(641*(82/1027))*.095*tune().w,mh=(1.15+.7*3.9)*tune().h;x.fillStyle="#351414";x.beginPath();x.ellipse(m.x,m.y,mw/2,mh/2,0,0,2*Math.PI);x.fill();x.fillStyle="#d97878";x.beginPath();x.ellipse(m.x,m.y+mh*.12,mw*.28,mh*.18,0,0,2*Math.PI);x.fill();x.strokeStyle="#ff65a3";x.lineWidth=1.6/z;x.beginPath();x.arc(m.x,m.y,11/z,0,2*Math.PI);x.moveTo(m.x-18/z,m.y);x.lineTo(m.x+18/z,m.y);x.moveTo(m.x,m.y-18/z);x.lineTo(m.x,m.y+18/z);x.stroke()}
  x.restore();
  }else{x.fillStyle="#c6d4e7";x.font="3px Arial";x.textAlign="center";x.fillText("Loading sprite...",0,-10)}
  x.restore();stats()
@@ -124,11 +124,16 @@ function stats(){
  el("fileName").textContent=filename()+(st.kind==="light"?" · Actual playback order":"");
  el("dx").textContent=(t.dx>=0?"+":"")+t.dx.toFixed(2);
  el("dy").textContent=(t.dy>=0?"+":"")+t.dy.toFixed(2);
+ el("widthValue").textContent=Math.round(t.w*100)+"%";el("heightValue").textContent=Math.round(t.h*100)+"%";
+ el("widthSlider").value=t.w;el("heightSlider").value=t.h;
+ el("selectedLabel").textContent=st.selected?"Mouth selected ✓":"Tap the pink mouth";
+ el("canvasFrame").classList.toggle("selected",st.selected);
+ el("markerLabel").textContent=st.selected?"Pink ⊕ SELECTED · Blue ⊕ auto":"Tap pink mouth to select";
  el("posx").textContent=m?m.x.toFixed(2):"—";
  el("posy").textContent=m?m.y.toFixed(2):"—";
  el("zoomVal").textContent=st.zoom+"×";
  el("mode").textContent=st.face?"Face close-up":"Whole character";
- el("code").textContent="'"+key()+"':{dx:"+t.dx+",dy:"+t.dy+"},";
+ el("code").textContent="'"+key()+"':{dx:"+t.dx+",dy:"+t.dy+",w:"+t.w+",h:"+t.h+"},";
  el("count").textContent=Object.keys(st.changes).length+" unsent frame changes";
  el("prev").disabled=st.i===0;el("next").disabled=st.i===p.ids.length-1
 }
@@ -142,9 +147,9 @@ function loadSprite(){
  im.onerror=()=>{if(selected===key())el("status").textContent="Unable to load sprite from GitHub."};
  im.src=ASSETS+encodeURIComponent(filename())
 }
-function commitEdit(dx,dy){
- const d={dx:cl(num(dx),-80,80),dy:cl(num(dy),-80,80)},o=orig();
- if(d.dx===o.dx&&d.dy===o.dy)delete st.changes[key()];else st.changes[key()]=d;
+function commitEdit(dx,dy,w=tune().w,h=tune().h){
+ const d={dx:cl(num(dx),-80,80),dy:cl(num(dy),-80,80),w:cl(Math.round(w*100)/100,.5,2.5),h:cl(Math.round(h*100)/100,.5,2.5)},o=orig();
+ if(d.dx===o.dx&&d.dy===o.dy&&d.w===o.w&&d.h===o.h)delete st.changes[key()];else st.changes[key()]=d;
  try{localStorage.setItem("fatnap-mouthlab-edits",JSON.stringify(st.changes))}catch{}
  draw()
 }
