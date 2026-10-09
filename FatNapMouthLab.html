@@ -115,6 +115,10 @@ canvas{display:block;width:100%;height:clamp(330px,56vw,520px);cursor:crosshair;
  canvas{min-height:78px}
 }
 
+
+.talk-preview{position:absolute;right:7px;top:6px;z-index:3;padding:7px 12px;border-radius:9px;background:#85334b;border-color:#ff99bf;box-shadow:0 4px 16px #05071399;font-size:13px;font-weight:850;white-space:nowrap}
+.talk-preview.playing{background:#384a66;border-color:#8da2c4;color:#fff}
+@media(max-width:710px){.talk-preview{top:5px;right:5px;border-radius:7px;padding:4px 9px;font-size:11px;line-height:1.2}}
 </style></head><body><main>
 <header><div><div class="over">Super Baldio Bros · Developer tool</div><h1>Fat Nap <span style="color:#f4c778">Mouth Lab</span> 👄</h1><p>Position every talking mouth without loading the game.</p></div><span class="ver" id="version">Loading…</span></header>
 <div class="layout"><aside class="card stack">
@@ -126,8 +130,8 @@ canvas{display:block;width:100%;height:clamp(330px,56vw,520px);cursor:crosshair;
 <div><label>GitHub sync</label><div class="status" id="status">Loading current positions…</div></div>
 </aside><section class="card">
 <div class="viewerhead"><div><div id="frameTitle">Crouching • Frame 1</div><div id="fileName"></div></div><div class="row"><button id="flipMobile" aria-label="Flip facing direction" title="Flip direction">⇄</button><button id="prev">◀</button><button id="next">▶</button></div></div>
-<div class="canvasbox selected" id="canvasFrame"><canvas id="canvas"></canvas><div class="badge" id="markerLabel">Pink ⊕ talking mouth · Blue ⊕ auto point</div></div>
-<div class="help">Tap his mouth to select it. Then use the separate controller below to move or resize it without obscuring his face.</div>
+<div class="canvasbox selected" id="canvasFrame"><canvas id="canvas"></canvas><div class="badge" id="markerLabel">Pink ⊕ talking mouth · Blue ⊕ auto point</div><button id="talkPreview" class="talk-preview" aria-pressed="false" title="Preview how this mouth opens and closes during speech">▶ Talk</button></div>
+<div class="help">Tap the mouth, then use the controller below to move, resize or rotate it. Press ▶ Talk to preview opening and closing on the selected frame (simulated speech, not a voice recording).</div>
 <div class="zoom"><label for="zoom" style="margin:0">Zoom</label><input id="zoom" type="range" min="2" max="15" step=".5" value="7"><b id="zoomVal">7×</b><button id="mode">Face view</button></div>
 <div class="stats">
 <div class="stat"><span>Frame X offset</span><strong class="hot" id="dx">—</strong><small>+ means right</small></div>
@@ -171,7 +175,7 @@ const POSES=[
 ];
 const el=id=>document.getElementById(id);
 const c=el("canvas"),x=c.getContext("2d"),cl=(v,a,b)=>Math.min(b,Math.max(a,v)),fatNapMouthDetectCache=new WeakMap();
-const st={kind:"crouch",i:0,dir:1,zoom:7,face:true,selected:true,controlMode:"move",activePad:null,ready:false,img:null,anchor:null,W:0,H:0,ox:0,oy:0,original:{},changes:{},base:{},bounds:{},version:"",drag:false};
+const st={kind:"crouch",i:0,dir:1,zoom:7,face:true,selected:true,controlMode:"move",activePad:null,talking:false,talkStart:0,talkRaf:0,talkLevel:.7,ready:false,img:null,anchor:null,W:0,H:0,ox:0,oy:0,original:{},changes:{},base:{},bounds:{},version:"",drag:false};
 const pose=()=>POSES.find(z=>z.id===st.kind),filename=()=>file(pose().ids[st.i]),key=()=>st.kind+"|"+filename(),orig=()=>({dx:0,dy:0,w:1,h:1,r:0,...(st.original[key()]||{})}),tune=()=>({...orig(),...(st.changes[key()]||{})}),base=()=>st.base[st.kind]||{dx:0,dy:0};
 const num=v=>Math.round(v*4)/4;
 function params(){if(!st.ready)return null;const im=st.img,b=st.bounds[filename()],s=96*pose().size/im.naturalHeight;
@@ -179,7 +183,7 @@ function params(){if(!st.ready)return null;const im=st.img,b=st.bounds[filename(
 function autoMouth(){const a=params();return a?{x:a.x+st.anchor.x*a.s,y:a.y+st.anchor.y*a.s}:null}
 function mouth(){const a=autoMouth();return a?{x:a.x+base().dx+tune().dx,y:a.y+base().dy+tune().dy}:null}
 function sizeCanvas(){const rect=c.getBoundingClientRect(),d=Math.min(3,devicePixelRatio||1);st.W=rect.width;st.H=rect.height;c.width=Math.round(st.W*d);c.height=Math.round(st.H*d);x.setTransform(d,0,0,d,0,0)}
-function draw(){
+function draw(updateControls=true){
  if(!st.W||Math.abs(c.getBoundingClientRect().width-st.W)>1||Math.abs(c.getBoundingClientRect().height-st.H)>1)sizeCanvas();
  const W=st.W,H=st.H,z=st.zoom,m=mouth(),focus=autoMouth();
  // Lock camera on the unadjusted detector so the sprite stays still while dragging.
@@ -193,11 +197,41 @@ function draw(){
  if(st.ready){const p=params(),a=autoMouth();x.save();if(st.dir<0)x.scale(-1,1);
  x.drawImage(st.img,p.x,p.y,p.w,p.h);
  if(a){x.strokeStyle="#6ad6ff";x.lineWidth=1.5/z;x.beginPath();x.arc(a.x,a.y,7/z,0,2*Math.PI);x.moveTo(a.x-11/z,a.y);x.lineTo(a.x+11/z,a.y);x.moveTo(a.x,a.y-11/z);x.lineTo(a.x,a.y+11/z);x.stroke()}
- if(m){const mw=(641*(82/1027))*.095*tune().w,mh=(1.15+.7*3.9)*tune().h;x.save();x.translate(m.x,m.y);x.rotate(tune().r*Math.PI/180);x.fillStyle="#351414";x.beginPath();x.ellipse(0,0,mw/2,mh/2,0,0,2*Math.PI);x.fill();x.fillStyle="#d97878";x.beginPath();x.ellipse(0,mh*.12,mw*.28,mh*.18,0,0,2*Math.PI);x.fill();x.restore();x.strokeStyle="#ff65a3";x.lineWidth=1.6/z;x.beginPath();x.arc(m.x,m.y,11/z,0,2*Math.PI);x.moveTo(m.x-18/z,m.y);x.lineTo(m.x+18/z,m.y);x.moveTo(m.x,m.y-18/z);x.lineTo(m.x,m.y+18/z);x.stroke()}
+ if(m){const level=st.talking?st.talkLevel:.7,mw=(641*(82/1027))*.095*tune().w,mh=(1.15+level*3.9)*tune().h;x.save();x.translate(m.x,m.y);x.rotate(tune().r*Math.PI/180);if(level>.025){x.globalAlpha=.92;x.fillStyle="#351414";x.beginPath();x.ellipse(0,0,mw/2,mh/2,0,0,2*Math.PI);x.fill();if(level>.34){x.globalAlpha=.82;x.fillStyle="#d97878";x.beginPath();x.ellipse(0,mh*.12,mw*.28,mh*.18,0,0,2*Math.PI);x.fill()}}x.restore();x.strokeStyle="#ff65a3";x.lineWidth=1.6/z;x.beginPath();x.arc(m.x,m.y,11/z,0,2*Math.PI);x.moveTo(m.x-18/z,m.y);x.lineTo(m.x+18/z,m.y);x.moveTo(m.x,m.y-18/z);x.lineTo(m.x,m.y+18/z);x.stroke()}
  x.restore();
  }else{x.fillStyle="#c6d4e7";x.font="3px Arial";x.textAlign="center";x.fillText("Loading sprite...",0,-10)}
- x.restore();stats()
+ x.restore();if(updateControls)stats()
 }
+// Match the normal-form mouth renderer: width fixed per frame, height responds
+// to voice level, and the tongue appears above the .34 speaking threshold.
+// Demo uses a simulated voice envelope; real gameplay reads Fat Nap's audio.
+function speechPreviewLevel(t){
+ const u=t%4.10;
+ if(u<.18||u>3.63||(u>1.22&&u<1.43)||(u>2.36&&u<2.57))return 0;
+ const pulse=Math.pow(Math.max(0,Math.sin(t*18.1)+.31*Math.sin(t*30.7+.8)),1.12);
+ const loudness=.34+.36*Math.sin(t*3.15-.35)**2;
+ return cl(.08+pulse*loudness,0,1);
+}
+function speechPreviewTick(now){
+ if(!st.talking)return;
+ st.talkLevel=speechPreviewLevel((now-st.talkStart)/1000);
+ draw(false);
+ st.talkRaf=requestAnimationFrame(speechPreviewTick)
+}
+function toggleTalkPreview(force){
+ const next=typeof force==="boolean"?force:!st.talking;
+ if(next===st.talking)return;
+ st.talking=next;
+ if(st.talkRaf){cancelAnimationFrame(st.talkRaf);st.talkRaf=0}
+ st.talkLevel=next?0:.7;
+ const b=el("talkPreview");b.textContent=next?"■ Stop":"▶ Talk";
+ b.classList.toggle("playing",next);b.setAttribute("aria-pressed",String(next));
+ b.title=next?"Stop simulated talking-mouth preview":"Preview how this mouth opens and closes during speech";
+ if(next){st.talkStart=performance.now();st.talkRaf=requestAnimationFrame(speechPreviewTick)}
+ draw(false)
+}
+el("talkPreview").onclick=()=>toggleTalkPreview();
+document.addEventListener("visibilitychange",()=>{if(document.hidden&&st.talking)toggleTalkPreview(false)});
 function stats(){
  const t=tune(),m=mouth(),p=pose();
  el("version").textContent="Game v"+(st.version||"…");
