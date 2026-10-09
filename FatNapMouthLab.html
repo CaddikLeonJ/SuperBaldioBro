@@ -210,7 +210,7 @@ el("discard").onclick=()=>{if(confirm("Discard all unsent mouth adjustments?")){
 function exportChanges(all){
  const keys=all?Object.keys(st.changes):[key()];
  if(!keys.length)return "No unsent changes yet.";
- return "Fat Nap Mouth Lab — v"+st.version+"\n"+keys.map(k=>{const d=st.changes[k]||st.original[k]||{dx:0,dy:0};return "'"+k+"':{dx:"+d.dx+",dy:"+d.dy+"}"}).join("\n")
+ return "Fat Nap Mouth Lab — v"+st.version+"\n"+keys.map(k=>{const d=st.changes[k]||st.original[k]||{dx:0,dy:0};return "'"+k+"':{dx:"+d.dx+",dy:"+d.dy+",w:"+(d.w??1)+",h:"+(d.h??1)+"}"}).join("\n")
 }
 async function copy(s){try{await navigator.clipboard.writeText(s);el("code").textContent="✓ Copied!\n"+s}catch(e){prompt("Copy these coordinates:",s)}}
 el("copyFrame").onclick=()=>copy(exportChanges(false));el("copyAll").onclick=()=>copy(exportChanges(true));
@@ -308,7 +308,7 @@ async function syncGame(){
   if(!v||!b||!f||!bb)throw Error("Mouth data not found");
   const base={},frames={};
   for(const m of b[1].matchAll(/(\w+):\{dx:([-.\d]+),dy:([-.\d]+),scale:([-.\d]+)\}/g))base[m[1]]={dx:+m[2],dy:+m[3],scale:+m[4]};
-  for(const m of f[1].matchAll(/'([^']+)':\{dx:([-.\d]+),dy:([-.\d]+)\}/g))frames[m[1]]={dx:+m[2],dy:+m[3]};
+  for(const m of f[1].matchAll(/'([^']+)':\{dx:([-.\d]+),dy:([-.\d]+)(?:,w:([-.\d]+),h:([-.\d]+))?\}/g))frames[m[1]]={dx:+m[2],dy:+m[3],w:m[4]?+m[4]:1,h:m[5]?+m[5]:1};
   st.base=base;st.original=frames;st.bounds=JSON.parse(bb[1]);st.version=v[1];
   el("status").textContent="✓ Live offsets loaded from game v"+st.version;
  }catch(e){el("status").textContent="Offline: using embedded settings (v"+st.version+"). "+e.message}
