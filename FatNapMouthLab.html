@@ -76,9 +76,10 @@ function mouth(){const a=autoMouth();return a?{x:a.x+base().dx+tune().dx,y:a.y+b
 function sizeCanvas(){const rect=c.getBoundingClientRect(),d=Math.min(3,devicePixelRatio||1);st.W=rect.width;st.H=rect.height;c.width=Math.round(st.W*d);c.height=Math.round(st.H*d);x.setTransform(d,0,0,d,0,0)}
 function draw(){
  if(!st.W)sizeCanvas();
- const W=st.W,H=st.H,z=st.zoom,m=mouth();
- st.ox=st.face&&m?W/2-m.x*st.dir*z:W/2;
- st.oy=st.face&&m?H*.52-m.y*z:H*.84;
+ const W=st.W,H=st.H,z=st.zoom,m=mouth(),focus=autoMouth();
+ // Lock camera on the unadjusted detector so the sprite stays still while dragging.
+ st.ox=st.face&&focus?W/2-focus.x*st.dir*z:W/2;
+ st.oy=st.face&&focus?H*.52-focus.y*z:H*.84;
  x.save();x.fillStyle="#101725";x.fillRect(0,0,W,H);
  x.translate(st.ox,st.oy);x.scale(z,z);
  const left=-st.ox/z,right=(W-st.ox)/z,top=-st.oy/z,bottom=(H-st.oy)/z;
