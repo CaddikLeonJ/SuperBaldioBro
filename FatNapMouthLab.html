@@ -243,7 +243,7 @@ const el=id=>document.getElementById(id);
 const c=el("canvas"),x=c.getContext("2d"),cl=(v,a,b)=>Math.min(b,Math.max(a,v)),fatNapMouthDetectCache=new WeakMap();
 const st={kind:"crouch",i:0,dir:1,zoom:7,face:true,selected:true,controlMode:"move",activePad:null,talking:false,talkStart:0,talkRaf:0,talkLevel:.7,markersVisible:true,ready:false,img:null,anchor:null,W:0,H:0,ox:0,oy:0,original:{},changes:{},base:{},bounds:{},version:"",drag:false};
 const pose=()=>POSES.find(z=>z.id===st.kind),filename=()=>file(pose().ids[st.i]),key=()=>st.kind+"|"+filename(),orig=()=>({dx:0,dy:0,w:1,h:1,r:0,...(st.original[key()]||{})}),tune=()=>({...orig(),...(st.changes[key()]||{})}),base=()=>st.base[st.kind]||{dx:0,dy:0};
-const num=v=>Math.round(v*4)/4;
+const num=v=>Math.round(v*100)/100;
 function params(){if(!st.ready)return null;const im=st.img,b=st.bounds[filename()],s=96*pose().size/im.naturalHeight;
  return{s:s,x:-im.naturalWidth*s/2,y:-(b?b[3]:im.naturalHeight)*s,w:im.naturalWidth*s,h:im.naturalHeight*s}}
 function autoMouth(){const a=params();return a?{x:a.x+st.anchor.x*a.s,y:a.y+st.anchor.y*a.s}:null}
@@ -341,20 +341,58 @@ el("markerToggle").onclick=()=>{
 
 el("talkPreview").onclick=()=>toggleTalkPreview();
 document.addEventListener("visibilitychange",()=>{if(document.hidden&&st.talking)toggleTalkPreview(false)});
+// Typed values and touch adjustments share the same per-frame edit state.
+// Avoid overwriting the active input while someone is typing "-" or "0.".
+function syncTypedValue(id,value){
+ const field=el(id);
+ if(document.activeElement===field)return;
+ field.value=value==null?"":String(Math.round(value*100)/100);
+}
+const FIELD_LIMITS={
+ dxInput:[-80,80],dyInput:[-80,80],
+ posxInput:[-1000,1000],posyInput:[-1000,1000],
+ widthInput:[.5,2.5],heightInput:[.5,2.5],
+ rotationInput:[-180,180]
+};
+const numericText=/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/;
+function applyTypedCalibration(id,value){
+ const t=tune();
+ switch(id){
+  case "dxInput":commitEdit(value,t.dy,t.w,t.h,t.r);break;
+  case "dyInput":commitEdit(t.dx,value,t.w,t.h,t.r);break;
+  case "posxInput":{const m=mouth();if(m)commitEdit(t.dx+value-m.x,t.dy,t.w,t.h,t.r);break}
+  case "posyInput":{const m=mouth();if(m)commitEdit(t.dx,t.dy+value-m.y,t.w,t.h,t.r);break}
+  case "widthInput":commitEdit(t.dx,t.dy,value,t.h,t.r);break;
+  case "heightInput":commitEdit(t.dx,t.dy,t.w,value,t.r);break;
+  case "rotationInput":commitEdit(t.dx,t.dy,t.w,t.h,value);break
+ }
+}
+for(const id of Object.keys(FIELD_LIMITS)){
+ const field=el(id),[min,max]=FIELD_LIMITS[id];
+ field.addEventListener("focus",()=>field.select());
+ field.addEventListener("input",()=>{
+  const raw=field.value.trim();
+  if(!numericText.test(raw))return;
+  const value=Number(raw);
+  if(Number.isFinite(value)&&value>=min&&value<=max)applyTypedCalibration(id,value);
+ });
+ field.addEventListener("keydown",event=>{
+  if(event.key==="Enter"){event.preventDefault();field.blur()}
+ });
+ field.addEventListener("blur",()=>stats());
+}
 function stats(){
  const t=tune(),m=mouth(),p=pose();
  el("version").textContent="Game v"+(st.version||"…");
  el("frameTitle").textContent=p.name+" • Frame "+(st.i+1);
  el("fileName").textContent=filename()+(st.kind==="light"?" · Actual playback order":"");
- el("dx").textContent=(t.dx>=0?"+":"")+t.dx.toFixed(2);
- el("dy").textContent=(t.dy>=0?"+":"")+t.dy.toFixed(2);
- el("widthValue").textContent=Math.round(t.w*100)+"%";el("heightValue").textContent=Math.round(t.h*100)+"%";
- el("widthSlider").value=t.w;el("heightSlider").value=t.h;el("rotationSlider").value=t.r;el("rotationValue").textContent=(t.r>0?"+":"")+t.r+"°";
+ syncTypedValue("dxInput",t.dx);syncTypedValue("dyInput",t.dy);
+ syncTypedValue("widthInput",t.w);syncTypedValue("heightInput",t.h);
+ el("widthSlider").value=t.w;el("heightSlider").value=t.h;el("rotationSlider").value=t.r;syncTypedValue("rotationInput",t.r);
  el("selectedLabel").textContent=st.selected?"Mouth selected ✓":"Tap the pink mouth";
  el("canvasFrame").classList.toggle("selected",st.selected);
  updateMarkerToggle();
- el("posx").textContent=m?m.x.toFixed(2):"—";
- el("posy").textContent=m?m.y.toFixed(2):"—";
+ syncTypedValue("posxInput",m?m.x:null);syncTypedValue("posyInput",m?m.y:null);
  el("zoomVal").textContent=st.zoom+"×";
  el("mode").textContent=st.face?"Face close-up":"Whole character";
  el("code").textContent="'"+key()+"':{dx:"+t.dx+",dy:"+t.dy+",w:"+t.w+",h:"+t.h+",r:"+t.r+"},";
