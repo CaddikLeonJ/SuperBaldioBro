@@ -23,7 +23,7 @@ canvas{display:block;width:100%;height:clamp(330px,56vw,520px);cursor:crosshair;
 
 .touchpanel{border:1px solid #68576e;border-radius:15px;padding:12px;margin:13px 0;background:linear-gradient(140deg,#2c2639,#1b2435)}
 .touchhead{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:9px}.touchhead small{color:#ffc7db}
-.modegroup{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 10px}
+.modegroup{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:8px 0 10px}
 .modegroup button.sel{background:#85344e;border-color:#ff9bc1}
 .pad{height:152px;border-radius:13px;border:1px solid #6c6583;background:radial-gradient(circle,#41405c 0,#292f45 28%,#202c43 64%,#1b2a3e 100%);position:relative;touch-action:none;user-select:none;overflow:hidden;cursor:grab}
 .pad:active{cursor:grabbing}.pad:before{content:"";position:absolute;left:50%;top:0;height:100%;width:1px;background:#8995b040}.pad:after{content:"";position:absolute;top:50%;left:0;width:100%;height:1px;background:#8995b040}
@@ -32,6 +32,7 @@ canvas{display:block;width:100%;height:clamp(330px,56vw,520px);cursor:crosshair;
 .pad-note{font-size:12px;color:#bfcce0;margin:7px 0 0}
 .resize-grid{display:grid;grid-template-columns:1fr;gap:9px;margin:10px 0 0}
 .size-label{display:flex;justify-content:space-between;align-items:center;gap:8px}.size-label b{color:#ffb7d1;min-width:50px;text-align:right;font-size:12px;font-variant-numeric:tabular-nums}
+.rotation-actions{display:flex;align-items:center;gap:4px}.rotation-actions button{font-size:12px;padding:2px 7px;min-width:27px;border-radius:7px}.rotation-actions b{min-width:29px;text-align:center}
 .resize-grid input{width:100%;accent-color:#ff689c;min-height:25px}
 .canvasbox.selected{border-color:#e776a2;box-shadow:0 0 0 1px #a7497d}
 @media(min-width:750px){.pad{height:140px}}
@@ -76,7 +77,7 @@ canvas{display:block;width:100%;height:clamp(330px,56vw,520px);cursor:crosshair;
  .stat span{font-size:8px;line-height:1.1;letter-spacing:0;display:block}
  .stat strong{font-size:14px;margin:0;line-height:1.25}
  .stat small{display:none}
- .touchpanel{flex:0 0 182px;min-height:182px;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);grid-template-rows:20px 28px minmax(0,1fr);column-gap:8px;row-gap:3px;margin:0;padding:6px;border-radius:10px}
+ .touchpanel{flex:0 0 194px;min-height:194px;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);grid-template-rows:20px 28px minmax(0,1fr);column-gap:8px;row-gap:3px;margin:0;padding:6px;border-radius:10px}
  .touchhead{grid-column:1/-1;grid-row:1;min-width:0;margin:0;font-size:12px;line-height:19px}
  .touchhead strong{white-space:nowrap}
  .touchhead small{font-size:9px;white-space:nowrap}
@@ -90,7 +91,7 @@ canvas{display:block;width:100%;height:clamp(330px,56vw,520px);cursor:crosshair;
  .resize-grid>div{min-width:0}
  .size-label{gap:2px}
  .size-label label{font-size:10px;letter-spacing:0;line-height:1.2}
- .size-label b{font-size:10px;min-width:32px}
+ .size-label b{font-size:10px;min-width:32px}.rotation-actions{gap:2px}.rotation-actions button{font-size:11px;padding:1px 5px;min-width:23px}.rotation-actions b{min-width:24px}
  .resize-grid input{height:24px;min-height:24px;margin:0}
  .dpad{flex:0 0 30px;min-height:30px;max-width:none;width:100%;display:flex;justify-content:space-between;align-items:stretch;gap:4px;margin:0}
  .dpad span{display:none}
@@ -104,7 +105,7 @@ canvas{display:block;width:100%;height:clamp(330px,56vw,520px);cursor:crosshair;
  header h1{font-size:17px}
  .layout>aside.card{flex-basis:39px;min-height:39px;padding:2px 4px;grid-template-rows:31px}
  .layout>aside.card select,.frames,.frames button{height:31px}
- .touchpanel{flex-basis:156px;min-height:156px;grid-template-rows:18px 25px minmax(0,1fr);padding:4px}
+ .touchpanel{flex-basis:165px;min-height:165px;grid-template-rows:18px 25px minmax(0,1fr);padding:4px}
  .modegroup,.modegroup button{height:25px}
  .stats{flex-basis:38px;min-height:38px}
  .stat{padding:2px}
@@ -136,12 +137,13 @@ canvas{display:block;width:100%;height:clamp(330px,56vw,520px);cursor:crosshair;
 </div>
 <div class="touchpanel">
 <div class="touchhead"><strong>👆 Mouth controller</strong><small id="selectedLabel">Mouth selected ✓</small></div>
-<div class="modegroup"><button id="moveMode" class="sel">✥ Move</button><button id="resizeMode">⤢ Resize</button></div>
+<div class="modegroup"><button id="moveMode" class="sel">✥ Move</button><button id="resizeMode">⤢ Resize</button><button id="rotateMode">⟳ Rotate</button></div>
 <div class="pad" id="pad" aria-label="Move or resize mouth from this separate touchpad"><div class="padlabel" id="padLabel">DRAG YOUR THUMB HERE</div><div class="padknob" id="padKnob">✥</div></div>
 <p class="pad-note" id="padHint">Drag anywhere in this pad. Your thumb never covers Fat Nap's face.</p>
 <div class="resize-grid">
 <div><div class="size-label"><label for="widthSlider" style="margin:0">↔ Mouth width</label><b id="widthValue">100%</b></div><input id="widthSlider" type="range" min=".5" max="2.5" step=".05" value="1"></div>
 <div><div class="size-label"><label for="heightSlider" style="margin:0">↕ Mouth height</label><b id="heightValue">100%</b></div><input id="heightSlider" type="range" min=".5" max="2.5" step=".05" value="1"></div>
+<div><div class="size-label"><label for="rotationSlider" style="margin:0">⟳ Tilt</label><span class="rotation-actions"><button id="rotMinus" aria-label="Rotate counterclockwise one degree">−</button><b id="rotationValue">0°</b><button id="rotPlus" aria-label="Rotate clockwise one degree">+</button></span></div><input id="rotationSlider" type="range" min="-180" max="180" step="1" value="0"></div>
 </div></div>
 <div class="help" style="text-align:center">Or fine-tune by 0.25 game pixels</div>
 <div class="dpad"><span></span><button id="up">↑ Up</button><span></span>
