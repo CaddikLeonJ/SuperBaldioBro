@@ -216,9 +216,9 @@ canvas{display:block;width:100%;height:clamp(330px,56vw,520px);cursor:crosshair;
 <div class="note"><strong>Powered-form animations:</strong> Clout Power transformation, idle, walking, running and scream use separate sprites. Other animations marked <strong>Shared</strong> are the same sprites as normal Fat Nap, enlarged in the game; tuning a Shared frame affects both forms.</div>
 <div><label>GitHub sync</label><div class="status" id="status">Loading current positions…</div></div>
 </aside><section class="card">
-<div class="viewerhead"><div><div id="frameTitle">Crouching • Frame 1</div><div id="fileName"></div></div><div class="row"><button id="flipMobile" aria-label="Flip facing direction" title="Flip direction">⇄</button><button id="prev">◀</button><button id="next">▶</button></div></div>
+<div class="viewerhead"><div><div id="frameTitle">Crouching • Frame 1</div><div id="fileName"></div></div><div class="row"><button id="flipMobile" aria-label="Flip facing direction" title="Flip direction">⇄</button><button id="playFrames" type="button" title="Cycle through all frames of the selected animation" aria-pressed="false">▶ Loop</button><button id="prev">◀</button><button id="next">▶</button></div></div>
 <div class="canvasbox selected" id="canvasFrame"><canvas id="canvas"></canvas><button id="markerToggle" type="button" class="badge marker-toggle" aria-pressed="true" title="Show or hide mouth markers">◉ Markers On</button><button id="talkPreview" class="talk-preview" aria-pressed="false" title="Preview how this mouth opens and closes during speech">▶ Talk</button></div>
-<div class="help">Tap the mouth, then use the controller below to move, resize or rotate it. Press ▶ Talk to preview opening and closing on the selected frame (simulated speech, not a voice recording).</div>
+<div class="help">Tap the mouth, then use the controller below to move, resize or rotate it. Press ▶ Talk to preview speech, or ▶ Loop to cycle through the actual animation frames. Looping never changes saved mouth positions.</div>
 <div class="zoom"><label for="zoom" style="margin:0">Zoom</label><input id="zoom" type="range" min="2" max="15" step=".5" value="7"><b id="zoomVal">7×</b><button id="mode">Face view</button><button id="panToggle" class="sel" aria-pressed="true" title="Drag Fat Nap around the preview with your finger">✥ Drag</button><button id="resetView" title="Recenter the preview and reset zoom">⟲ Reset</button></div>
 <div class="stats">
 <div class="stat"><span>Frame X offset</span><input class="num-input stat-number" id="dxInput" type="text" inputmode="decimal" aria-label="Frame X offset" title="Type frame X offset in game pixels" value="0"><small>+ means right</small></div>
@@ -267,7 +267,7 @@ const POSES=[
 ];
 const el=id=>document.getElementById(id);
 const c=el("canvas"),x=c.getContext("2d"),cl=(v,a,b)=>Math.min(b,Math.max(a,v)),fatNapMouthDetectCache=new WeakMap();
-const st={kind:"crouch",form:"normal",i:0,dir:1,zoom:7,face:true,selected:true,controlMode:"move",activePad:null,talking:false,talkStart:0,talkRaf:0,talkLevel:.7,markersVisible:true,panEnabled:true,panX:0,panY:0,panPointer:null,viewFocus:null,spriteError:"",zoomInitialized:false,ready:false,img:null,sheetFrame:null,anchor:null,W:0,H:0,ox:0,oy:0,original:{},changes:{},base:{},bounds:{},version:"",drag:false};
+const st={kind:"crouch",form:"normal",i:0,playingFrames:false,frameTimer:null,dir:1,zoom:7,face:true,selected:true,controlMode:"move",activePad:null,talking:false,talkStart:0,talkRaf:0,talkLevel:.7,markersVisible:true,panEnabled:true,panX:0,panY:0,panPointer:null,viewFocus:null,spriteError:"",zoomInitialized:false,ready:false,img:null,sheetFrame:null,anchor:null,W:0,H:0,ox:0,oy:0,original:{},changes:{},base:{},bounds:{},version:"",drag:false};
 const pose=()=>POSES.find(z=>z.id===st.kind);
 const isPoweredKind=kind=>["powerIdle","powerWalk","powerRun","powerScream"].includes(kind);
 const isSpecialKind=kind=>kind==="crawl"||kind==="baldBang"||kind==="transform"||isPoweredKind(kind);
@@ -310,6 +310,24 @@ function params(){
 }
 function autoMouth(){const a=params();return a&&st.anchor?{x:a.x+st.anchor.x*(a.sx??a.s),y:a.y+st.anchor.y*(a.sy??a.s)}:null}
 function mouth(){const a=autoMouth();return a?{x:a.x+base().dx+tune().dx,y:a.y+base().dy+tune().dy}:null}
+function previewMouthSize(level){
+ const t=tune(),p=params(),w=t.w??.85,h=t.h??.5;
+ if(st.kind==="transform"){
+  // Direct match to drawTransformingFatNap's authored voice mouth.
+  const i=st.i,dw=p?.w||0;
+  const baseWidth=i===2?Math.max(2.2,dw*.072):Math.max(2.7,dw*.095);
+  const baseHeight=i===2?.9+level*3.05:1.15+level*3.9;
+  return {w:baseWidth*w/.85,h:baseHeight*h/.5}
+ }
+ if(isPoweredKind(st.kind)){
+  // Preview in the powered sprite's local coordinate space, before the
+  // uniform 3.75x Clout Power gameplay scale. This preserves the exact
+  // proportions of the game's drawFatNapMouthShape implementation.
+  const visualScale=Math.max(.65,12*(Math.abs(p?.sx||0)+Math.abs(p?.sy||0)));
+  return {w:7.4*visualScale*w/.85,h:(1.05+level*4.25)*visualScale*h/.5}
+ }
+ return {w:(641*(82/1027))*.095*w,h:(1.15+level*3.9)*h}
+}
 function previewImageBounds(im){
  const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
  if(isPoweredKind(st.kind)&&st.kind!=="powerScream"){
@@ -368,7 +386,7 @@ function draw(updateControls=true){
  if(st.ready){const p=params(),a=autoMouth();x.save();if(st.dir<0)x.scale(-1,1);
  x.drawImage(st.img,p.x,p.y,p.w,p.h);
  if(a&&st.markersVisible&&!st.talking){x.strokeStyle="#6ad6ff";x.lineWidth=1.5/z;x.beginPath();x.arc(a.x,a.y,7/z,0,2*Math.PI);x.moveTo(a.x-11/z,a.y);x.lineTo(a.x+11/z,a.y);x.moveTo(a.x,a.y-11/z);x.lineTo(a.x,a.y+11/z);x.stroke()}
- if(m){const level=st.talking?st.talkLevel:.7,mw=(641*(82/1027))*.095*tune().w,mh=(1.15+level*3.9)*tune().h;x.save();x.translate(m.x,m.y);x.rotate(tune().r*Math.PI/180);if(level>.025){x.globalAlpha=1;x.fillStyle="#351414";x.beginPath();x.ellipse(0,0,mw/2,mh/2,0,0,2*Math.PI);x.fill();if(level>.34){x.globalAlpha=1;x.fillStyle="#d97878";x.beginPath();x.ellipse(0,mh*.12,mw*.28,mh*.18,0,0,2*Math.PI);x.fill()}}x.restore();if(st.markersVisible&&!st.talking){x.strokeStyle="#ff65a3";x.lineWidth=1.6/z;x.beginPath();x.arc(m.x,m.y,11/z,0,2*Math.PI);x.moveTo(m.x-18/z,m.y);x.lineTo(m.x+18/z,m.y);x.moveTo(m.x,m.y-18/z);x.lineTo(m.x,m.y+18/z);x.stroke()}}
+ if(m){const level=st.talking?st.talkLevel:.7,shape=previewMouthSize(level),mw=shape.w,mh=shape.h;x.save();x.translate(m.x,m.y);x.rotate(tune().r*Math.PI/180);if(level>.025){x.globalAlpha=1;x.fillStyle="#351414";x.beginPath();x.ellipse(0,0,mw/2,mh/2,0,0,2*Math.PI);x.fill();if(level>.34){x.globalAlpha=1;x.fillStyle="#d97878";x.beginPath();x.ellipse(0,mh*.12,mw*.28,mh*.18,0,0,2*Math.PI);x.fill()}}x.restore();if(st.markersVisible&&!st.talking){x.strokeStyle="#ff65a3";x.lineWidth=1.6/z;x.beginPath();x.arc(m.x,m.y,11/z,0,2*Math.PI);x.moveTo(m.x-18/z,m.y);x.lineTo(m.x+18/z,m.y);x.moveTo(m.x,m.y-18/z);x.lineTo(m.x,m.y+18/z);x.stroke()}}
  x.restore();
  }else{
   // Show a readable loading/error message in screen coordinates, not offscreen in world coordinates.
@@ -509,9 +527,32 @@ function stats(){
  el("count").textContent=Object.keys(st.changes).length+" unsent frame changes";
  el("prev").disabled=st.i===0;el("next").disabled=st.i===p.ids.length-1
 }
+function stopFramePreview(){
+ if(st.frameTimer!==null){clearInterval(st.frameTimer);st.frameTimer=null}
+ st.playingFrames=false;
+ const button=el("playFrames");button.textContent="▶ Loop";button.setAttribute("aria-pressed","false");
+ button.classList.remove("sel")
+}
+function startFramePreview(){
+ if(st.playingFrames){stopFramePreview();return}
+ if(pose().ids.length<=1)return;
+ st.playingFrames=true;
+ const button=el("playFrames");button.textContent="■ Stop";button.setAttribute("aria-pressed","true");
+ button.classList.add("sel");
+ st.frameTimer=setInterval(()=>{
+  if(!st.playingFrames||document.hidden)return;
+  if(!st.ready)return; // Never skip a sprite that has not finished loading.
+  st.i=(st.i+1)%pose().ids.length;
+  buttonFrames();loadSprite()
+ },st.kind==="transform"?700:st.kind==="baldBang"?650:430)
+}
 function buttonFrames(){
  el("pose").value=st.kind;const target=el("frameButtons");target.replaceChildren();
- pose().ids.forEach((n,i)=>{const b=document.createElement("button");b.className=i===st.i?"sel":"";b.innerHTML="Frame "+(i+1)+"<small>"+(isSpecialKind(st.kind)?"sprite "+(i+1):n+".png")+"</small>";b.onclick=()=>{st.i=i;buttonFrames();loadSprite()};target.append(b)});stats()
+ pose().ids.forEach((n,i)=>{const b=document.createElement("button");b.className=i===st.i?"sel":"";
+ b.innerHTML="Frame "+(i+1)+"<small>"+(isSpecialKind(st.kind)?"sprite "+(i+1):n+".png")+"</small>";
+ b.onclick=()=>{stopFramePreview();st.i=i;buttonFrames();loadSprite()};target.append(b)});
+ el("playFrames").disabled=pose().ids.length<=1;
+ stats()
 }
 
 // Sprite sheets used by the game. These are extracted from the exact ZIP
@@ -986,8 +1027,10 @@ el("mode").onclick=()=>{
 el("rightFace").onclick=()=>{st.dir=1;el("rightFace").className="sel";el("leftFace").className="";draw()};
 el("leftFace").onclick=()=>{st.dir=-1;el("leftFace").className="sel";el("rightFace").className="";draw()};
 el("flipMobile").onclick=()=>el(st.dir===1?"leftFace":"rightFace").click();
-el("prev").onclick=()=>{if(st.i>0){st.i--;buttonFrames();loadSprite()}};
-el("next").onclick=()=>{if(st.i<pose().ids.length-1){st.i++;buttonFrames();loadSprite()}};
+el("prev").onclick=()=>{stopFramePreview();if(st.i>0){st.i--;buttonFrames();loadSprite()}};
+el("next").onclick=()=>{stopFramePreview();if(st.i<pose().ids.length-1){st.i++;buttonFrames();loadSprite()}};
+el("playFrames").onclick=startFramePreview;
+document.addEventListener("visibilitychange",()=>{if(document.hidden)stopFramePreview()});
 function refreshPoses(){
  const selector=el("pose");selector.replaceChildren();
  // Powered Idle/Walk/Run/Scream/Transform use their own sprite ZIPs.
@@ -1004,11 +1047,12 @@ function refreshPoses(){
  selector.value=st.kind
 }
 el("form").onchange=e=>{
+ stopFramePreview();
  st.form=e.target.value;
  st.kind=POSES.find(p=>(p.form||"normal")===st.form).id;
  st.i=0;refreshPoses();buttonFrames();loadSprite()
 };
-el("pose").onchange=e=>{st.kind=e.target.value;st.i=0;buttonFrames();loadSprite()};
+el("pose").onchange=e=>{stopFramePreview();st.kind=e.target.value;st.i=0;buttonFrames();loadSprite()};
 el("discard").onclick=()=>{if(confirm("Discard all unsent mouth adjustments?")){st.changes={};try{localStorage.removeItem("fatnap-mouthlab-edits")}catch{}draw()}};
 function exportChanges(all){
  const keys=all?Object.keys(st.changes):[key()];
