@@ -310,9 +310,17 @@ function params(){
 }
 function autoMouth(){const a=params();return a&&st.anchor?{x:a.x+st.anchor.x*(a.sx??a.s),y:a.y+st.anchor.y*(a.sy??a.s)}:null}
 function mouth(){const a=autoMouth();return a?{x:a.x+base().dx+tune().dx,y:a.y+base().dy+tune().dy}:null}
-function fallbackFaceAnchor(im){
+function previewImageBounds(im){
  const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
- const b=st.bounds[filename()]||[0,0,iw,ih];
+ if(isPoweredKind(st.kind)&&st.kind!=="powerScream"){
+  // Precisely match the body-only alpha bounds passed to the game detector.
+  const visible=editorPoweredBounds(im);
+  if(visible)return [visible.x,visible.y,visible.x+visible.w,visible.y+visible.h]
+ }
+ return st.bounds[filename()]||[0,0,iw,ih]
+}
+function fallbackFaceAnchor(im){
+ const b=previewImageBounds(im);
  return {x:b[0]+(b[2]-b[0])*(st.kind==="run"?.56:.50),y:b[1]+(b[3]-b[1])*(st.kind==="run"?.24:.285)}
 }
 function centeredZoom(im){
@@ -811,8 +819,8 @@ function finishSpriteLoad(im,selected,frame=null){
  if(selected!==key())return;
  st.img=im;st.sheetFrame=frame;
  const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
- const bounds=st.bounds[filename()]||[0,0,iw,ih];
- const found=detectFatNapMouthAnchor(im,bounds,null,st.kind);
+ const bounds=previewImageBounds(im);
+ const found=detectFatNapMouthAnchor(im,bounds,null,isPoweredKind(st.kind)?"powered":st.kind);
  const valid=found&&Number.isFinite(found.x)&&Number.isFinite(found.y)&&
    found.x>=bounds[0]&&found.x<=bounds[2]&&found.y>=bounds[1]&&found.y<=bounds[3];
  st.anchor=valid?found:fallbackFaceAnchor(im);
