@@ -185,6 +185,20 @@ canvas{display:block;width:100%;height:clamp(330px,56vw,520px);cursor:crosshair;
  .resize-grid .rotation-actions{gap:2px}
  .resize-grid .size-label{gap:2px}
 }
+
+/* Direct one-finger sprite preview panning; camera-only, never mouth calibration. */
+#canvas{cursor:grab}
+#canvas:active{cursor:grabbing}
+#canvas.pan-disabled,#canvas.pan-disabled:active{cursor:crosshair}
+.zoom #panToggle.sel{background:#374e71;border-color:#9db1df}
+.zoom #resetView{white-space:nowrap}
+@media(max-width:710px){
+ .zoom{gap:4px}
+ .zoom>label{display:none}
+ .zoom input{min-width:20px}
+ .zoom #panToggle,.zoom #resetView{font-size:10px;padding:5px 4px;border-radius:6px;line-height:1.1}
+ .zoom #mode{font-size:10px;padding:5px 4px}
+}
 </style></head><body><main>
 <header><div><div class="over">Super Baldio Bros · Developer tool</div><h1>Fat Nap <span style="color:#f4c778">Mouth Lab</span> 👄</h1><p>Position every talking mouth without loading the game.</p></div><span class="ver" id="version">Loading…</span></header>
 <div class="layout"><aside class="card stack">
@@ -198,7 +212,7 @@ canvas{display:block;width:100%;height:clamp(330px,56vw,520px);cursor:crosshair;
 <div class="viewerhead"><div><div id="frameTitle">Crouching • Frame 1</div><div id="fileName"></div></div><div class="row"><button id="flipMobile" aria-label="Flip facing direction" title="Flip direction">⇄</button><button id="prev">◀</button><button id="next">▶</button></div></div>
 <div class="canvasbox selected" id="canvasFrame"><canvas id="canvas"></canvas><button id="markerToggle" type="button" class="badge marker-toggle" aria-pressed="true" title="Show or hide mouth markers">◉ Markers On</button><button id="talkPreview" class="talk-preview" aria-pressed="false" title="Preview how this mouth opens and closes during speech">▶ Talk</button></div>
 <div class="help">Tap the mouth, then use the controller below to move, resize or rotate it. Press ▶ Talk to preview opening and closing on the selected frame (simulated speech, not a voice recording).</div>
-<div class="zoom"><label for="zoom" style="margin:0">Zoom</label><input id="zoom" type="range" min="2" max="15" step=".5" value="7"><b id="zoomVal">7×</b><button id="mode">Face view</button></div>
+<div class="zoom"><label for="zoom" style="margin:0">Zoom</label><input id="zoom" type="range" min="2" max="15" step=".5" value="7"><b id="zoomVal">7×</b><button id="mode">Face view</button><button id="panToggle" class="sel" aria-pressed="true" title="Drag Fat Nap around the preview with your finger">✥ Drag</button><button id="resetView" title="Recenter the preview and reset zoom">⟲ Reset</button></div>
 <div class="stats">
 <div class="stat"><span>Frame X offset</span><input class="num-input stat-number" id="dxInput" type="text" inputmode="decimal" aria-label="Frame X offset" title="Type frame X offset in game pixels" value="0"><small>+ means right</small></div>
 <div class="stat"><span>Frame Y offset</span><input class="num-input stat-number" id="dyInput" type="text" inputmode="decimal" aria-label="Frame Y offset" title="Type frame Y offset in game pixels" value="0"><small>+ means down</small></div>
@@ -241,7 +255,7 @@ const POSES=[
 ];
 const el=id=>document.getElementById(id);
 const c=el("canvas"),x=c.getContext("2d"),cl=(v,a,b)=>Math.min(b,Math.max(a,v)),fatNapMouthDetectCache=new WeakMap();
-const st={kind:"crouch",i:0,dir:1,zoom:7,face:true,selected:true,controlMode:"move",activePad:null,talking:false,talkStart:0,talkRaf:0,talkLevel:.7,markersVisible:true,ready:false,img:null,anchor:null,W:0,H:0,ox:0,oy:0,original:{},changes:{},base:{},bounds:{},version:"",drag:false};
+const st={kind:"crouch",i:0,dir:1,zoom:7,face:true,selected:true,controlMode:"move",activePad:null,talking:false,talkStart:0,talkRaf:0,talkLevel:.7,markersVisible:true,panEnabled:true,panX:0,panY:0,panPointer:null,ready:false,img:null,anchor:null,W:0,H:0,ox:0,oy:0,original:{},changes:{},base:{},bounds:{},version:"",drag:false};
 const pose=()=>POSES.find(z=>z.id===st.kind),filename=()=>file(pose().ids[st.i]),key=()=>st.kind+"|"+filename(),orig=()=>({dx:0,dy:0,w:1,h:1,r:0,...(st.original[key()]||{})}),tune=()=>({...orig(),...(st.changes[key()]||{})}),base=()=>st.base[st.kind]||{dx:0,dy:0};
 const num=v=>Math.round(v*100)/100;
 function params(){if(!st.ready)return null;const im=st.img,b=st.bounds[filename()],s=96*pose().size/im.naturalHeight;
@@ -253,8 +267,8 @@ function draw(updateControls=true){
  if(!st.W||Math.abs(c.getBoundingClientRect().width-st.W)>1||Math.abs(c.getBoundingClientRect().height-st.H)>1)sizeCanvas();
  const W=st.W,H=st.H,z=st.zoom,m=mouth(),focus=autoMouth();
  // Lock camera on the unadjusted detector so the sprite stays still while dragging.
- st.ox=st.face&&focus?W/2-focus.x*st.dir*z:W/2;
- st.oy=st.face&&focus?H*.52-focus.y*z:H*.84;
+ st.ox=(st.face&&focus?W/2-focus.x*st.dir*z:W/2)+st.panX;
+ st.oy=(st.face&&focus?H*.52-focus.y*z:H*.84)+st.panY;
  x.save();x.fillStyle="#101725";x.fillRect(0,0,W,H);
  x.translate(st.ox,st.oy);x.scale(z,z);
  const left=-st.ox/z,right=(W-st.ox)/z,top=-st.oy/z,bottom=(H-st.oy)/z;
@@ -417,13 +431,44 @@ function commitEdit(dx,dy,w=tune().w,h=tune().h,r=tune().r){
  draw()
 }
 // Tap the mouth to select it; never move it beneath a thumb covering the image.
-function selectMouth(e){
+// Pan only the editor's camera. Calibration values, sprite coordinates and exports
+// never change when dragging the actual canvas on iPhone or desktop.
+function selectMouthAt(clientX,clientY){
  if(!st.ready)return;
  const rect=c.getBoundingClientRect(),m=mouth();
+ if(!m)return;
  const sx=st.ox+st.zoom*st.dir*m.x,sy=st.oy+st.zoom*m.y;
- if(Math.hypot(e.clientX-rect.left-sx,e.clientY-rect.top-sy)<=Math.max(32,16*st.zoom)){st.selected=true;draw()}
+ if(Math.hypot(clientX-rect.left-sx,clientY-rect.top-sy)<=Math.max(32,16*st.zoom)){
+  st.selected=true;draw()
+ }
 }
-c.addEventListener("pointerdown",selectMouth);
+c.addEventListener("pointerdown",e=>{
+ if(e.button!==undefined&&e.button!==0)return;
+ if(st.panPointer)return;
+ e.preventDefault();
+ st.panPointer={id:e.pointerId,x:e.clientX,y:e.clientY,startX:st.panX,startY:st.panY,moved:false};
+ c.setPointerCapture(e.pointerId)
+});
+c.addEventListener("pointermove",e=>{
+ const p=st.panPointer;
+ if(!p||p.id!==e.pointerId)return;
+ const dx=e.clientX-p.x,dy=e.clientY-p.y;
+ if(Math.hypot(dx,dy)>5)p.moved=true;
+ if(!st.panEnabled||!p.moved)return;
+ e.preventDefault();
+ st.panX=p.startX+dx;st.panY=p.startY+dy;
+ draw(false)
+});
+function finishCanvasPointer(e){
+ const p=st.panPointer;
+ if(!p||p.id!==e.pointerId)return;
+ st.panPointer=null;
+ if(!p.moved&&e.type==="pointerup")selectMouthAt(e.clientX,e.clientY);
+ if(c.hasPointerCapture(e.pointerId))c.releasePointerCapture(e.pointerId)
+}
+c.addEventListener("pointerup",finishCanvasPointer);
+c.addEventListener("pointercancel",finishCanvasPointer);
+c.addEventListener("lostpointercapture",e=>{if(st.panPointer?.id===e.pointerId)st.panPointer=null});
 function setMode(mode){
  st.controlMode=mode;
  for(const [name,id] of [["move","moveMode"],["resize","resizeMode"],["rotate","rotateMode"]])
@@ -475,6 +520,19 @@ function nudge(dx,dy){const t=tune();commitEdit(t.dx+dx*.25,t.dy+dy*.25)}
 el("up").onclick=()=>nudge(0,-1);el("down").onclick=()=>nudge(0,1);el("left").onclick=()=>nudge(-1,0);el("right").onclick=()=>nudge(1,0);
 el("reset").onclick=()=>{const o=orig();commitEdit(o.dx,o.dy,o.w,o.h,o.r)};
 el("zoom").oninput=e=>{st.zoom=+e.target.value;draw()};
+el("panToggle").onclick=()=>{
+ st.panEnabled=!st.panEnabled;
+ el("panToggle").classList.toggle("sel",st.panEnabled);
+ el("panToggle").setAttribute("aria-pressed",String(st.panEnabled));
+ el("panToggle").textContent=st.panEnabled?"✥ Drag":"✥ Fixed";
+ c.classList.toggle("pan-disabled",!st.panEnabled);
+ draw(false)
+};
+el("resetView").onclick=()=>{
+ st.panX=0;st.panY=0;st.zoom=7;st.face=true;
+ el("zoom").value=7;
+ draw()
+};
 el("mode").onclick=()=>{st.face=!st.face;draw()};
 el("rightFace").onclick=()=>{st.dir=1;el("rightFace").className="sel";el("leftFace").className="";draw()};
 el("leftFace").onclick=()=>{st.dir=-1;el("leftFace").className="sel";el("rightFace").className="";draw()};
