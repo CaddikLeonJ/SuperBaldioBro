@@ -508,12 +508,12 @@ async function unzipPNGEntries(zip){
  return out
 }
 
-function prepareBaldBangFrames(){
+function prepareBaldBangFrames(sheet){
  try{
-  const count=4,W=baldBangSheet.naturalWidth,H=baldBangSheet.naturalHeight,cellW=Math.floor(W/count),out=[];
+  const count=4,W=sheet.naturalWidth,H=sheet.naturalHeight,cellW=Math.floor(W/count),out=[];
   for(let i=0;i<count;i++){
    const sx=i*cellW,sw=i===count-1?W-sx:cellW,cv=document.createElement('canvas');cv.width=sw;cv.height=H;
-   const g=cv.getContext('2d',{willReadFrequently:true});g.drawImage(baldBangSheet,sx,0,sw,H,0,0,sw,H);
+   const g=cv.getContext('2d',{willReadFrequently:true});g.drawImage(sheet,sx,0,sw,H,0,0,sw,H);
    const im=g.getImageData(0,0,sw,H),d=im.data;
    for(let p=0;p<sw*H;p++){
     const j=p*4,r=d[j],gg=d[j+1],b=d[j+2],a=d[j+3];
@@ -634,13 +634,9 @@ async function editorBuildSheet(kind){
   const entries=await editorReadZip("AyofatnapBaldBang.zip");
   const candidate=entries.find(e=>e.name.split("/").pop().toLowerCase()==="ayofatnapbaldbang.png")||entries[0];
   const sheet=await editorSheetImage(candidate.blob);
-  baldBangSheet.src=sheet.src;
-  await new Promise((resolve,reject)=>{
-   if(baldBangSheet.complete&&baldBangSheet.naturalWidth){resolve();return}
-   baldBangSheet.onload=resolve;
-   baldBangSheet.onerror=()=>reject(Error("Bald Bang sheet decode failed"))
-  });
-  prepareBaldBangFrames();
+  // Process the already-decoded image directly. Its temporary blob URL is
+  // revoked after decoding, so don't attempt a second network/image load.
+  prepareBaldBangFrames(sheet);
   if(!baldBangOK||baldBangFrames.length!==4)throw Error("Unable to isolate all 4 Bald Bang character frames");
   return baldBangFrames
  }
