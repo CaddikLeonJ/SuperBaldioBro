@@ -1,0 +1,248 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#131824"><title>Fat Nap — Mouth Lab</title>
+<style>
+:root{color-scheme:dark;--bg:#0d121d;--panel:#1a2231;--border:#374257;--gold:#f4c778;--pink:#ff659f;--muted:#a8b7d1}
+*{box-sizing:border-box}body{margin:0;color:#f4f6ff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;background:radial-gradient(circle at 50% 0,#263348,#0d121d 65%)}
+main{max-width:1000px;margin:auto;padding:14px 13px 45px}h1{margin:5px 0 8px;font-size:clamp(25px,6vw,38px);letter-spacing:-1px}p{line-height:1.5;color:var(--muted);margin:5px 0 12px}
+small{font-size:11px;color:var(--muted)}.over{color:var(--gold);font-size:11px;letter-spacing:1.8px;text-transform:uppercase;font-weight:800}
+header{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;margin-bottom:10px}.ver{background:#283750;color:#d9e7ff;padding:6px 10px;border-radius:10px;font:700 12px monospace;white-space:nowrap}
+.layout{display:grid;grid-template-columns:235px minmax(0,1fr);gap:14px}.card{border:1px solid var(--border);border-radius:18px;padding:14px;background:linear-gradient(140deg,#1b2435,#141c2a);box-shadow:0 20px 55px #0002}
+label,.muted-label{font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;font-weight:800;display:block;margin-bottom:7px}
+select,button{font:inherit;color:#f4f6ff;background:#263247;border:1px solid #566783;border-radius:11px;padding:10px 10px}select{width:100%}button{cursor:pointer;touch-action:manipulation;font-size:14px;font-weight:700}button:active{transform:scale(.98)}button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--gold)}button.sel{background:#77364d;border-color:#ff8aaf}
+.row{display:flex;gap:8px;align-items:center}.row>*{min-width:0}.spread{justify-content:space-between}.stack>*+*{margin-top:15px}
+.frames{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.frames button{font-size:12px;padding:9px 5px}.frames button small{display:block}
+.note{background:#263047;border:1px dashed #526580;border-radius:12px;padding:12px;color:#d4deed;font-size:12px;line-height:1.55}.note strong{color:var(--gold)}
+.canvasbox{background:#101724;overflow:hidden;border:1px solid #495876;border-radius:14px;position:relative}
+canvas{display:block;width:100%;height:clamp(330px,56vw,520px);cursor:crosshair;touch-action:none}.badge{position:absolute;left:9px;top:9px;background:#111a2ae8;border:1px solid #465674;border-radius:8px;font-size:11px;padding:7px 9px;pointer-events:none}
+#frameTitle{font-size:17px;font-weight:850}#fileName{font:12px monospace;color:#b2c1d5;overflow-wrap:anywhere}.viewerhead{display:flex;gap:8px;justify-content:space-between;align-items:center;margin-bottom:11px}.viewerhead button{padding:7px 12px}
+.zoom{display:flex;gap:9px;align-items:center;margin:14px 0}.zoom input{flex:1;accent-color:var(--pink);min-width:40px}#zoomVal{width:39px;text-align:right;font-weight:800}
+.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.stat{background:#111928;border:1px solid #43516a;padding:10px;border-radius:12px}.stat strong{display:block;font-size:24px;font-variant-numeric:tabular-nums;margin:3px 0}.stat span{font-size:10px;color:#bbc9da;letter-spacing:.6px;text-transform:uppercase}.stat strong.hot{color:#ffb3cf}.stat small{display:block}
+.dpad{display:grid;grid-template-columns:repeat(3,1fr);max-width:370px;gap:7px;margin:13px auto}.dpad button{min-height:38px}
+.cta{background:#85334b;border-color:#e88bab}.controls{display:grid;grid-template-columns:1fr 1fr;gap:8px}.status{font-size:12px;color:#b1cbed;line-height:1.5}.code{font:12px/1.5 ui-monospace,Menlo,monospace;background:#121a29;padding:9px;border:1px solid #42506b;border-radius:10px;overflow-wrap:anywhere}.help{font-size:12px;color:#aabbd2;margin:9px 0}
+@media(max-width:710px){.layout{grid-template-columns:1fr}.frames{grid-template-columns:repeat(4,minmax(0,1fr))}.card{padding:12px}canvas{height:420px}main{padding:12px 10px 40px}}
+</style></head><body><main>
+<header><div><div class="over">Super Baldio Bros · Developer tool</div><h1>Fat Nap <span style="color:#f4c778">Mouth Lab</span> 👄</h1><p>Position every talking mouth without loading the game.</p></div><span class="ver" id="version">Loading…</span></header>
+<div class="layout"><aside class="card stack">
+<div><label for="pose">Choose animation</label><select id="pose"></select></div>
+<div><label>Choose actual gameplay frame</label><div id="frameButtons" class="frames"></div></div>
+<div><label>Direction</label><div class="controls"><button id="rightFace" class="sel">→ Facing right</button><button id="leftFace">← Facing left</button></div></div>
+<div class="note"><strong>How it works:</strong> Pick a frame, zoom into Fat Nap's face and <strong>tap where his mouth belongs</strong>. The pink mouth marker moves instantly. Drag or nudge for precise positioning.</div>
+<div class="note"><strong>No guessing:</strong> X and Y match the per-frame offsets in the game's HTML. Pink is the actual talking mouth. Blue is the game's unadjusted mouth-detection point.</div>
+<div><label>GitHub sync</label><div class="status" id="status">Loading current positions…</div></div>
+</aside><section class="card">
+<div class="viewerhead"><div><div id="frameTitle">Crouching • Frame 1</div><div id="fileName"></div></div><div class="row"><button id="prev">◀</button><button id="next">▶</button></div></div>
+<div class="canvasbox"><canvas id="canvas"></canvas><div class="badge">Pink ⊕ talking mouth · Blue ⊕ auto point</div></div>
+<div class="help">Tap anywhere to position the mouth, or drag the pink crosshair. Face view magnifies the mouth; whole-sprite view shows the character.</div>
+<div class="zoom"><label for="zoom" style="margin:0">Zoom</label><input id="zoom" type="range" min="2" max="15" step=".5" value="7"><b id="zoomVal">7×</b><button id="mode">Face view</button></div>
+<div class="stats">
+<div class="stat"><span>Frame X offset</span><strong class="hot" id="dx">—</strong><small>+ means right</small></div>
+<div class="stat"><span>Frame Y offset</span><strong class="hot" id="dy">—</strong><small>+ means down</small></div>
+<div class="stat"><span>Mouth position X</span><strong id="posx">—</strong><small>Game pixels relative to feet</small></div>
+<div class="stat"><span>Mouth position Y</span><strong id="posy">—</strong><small>Game pixels relative to feet</small></div>
+</div>
+<div class="help" style="text-align:center">Fine-tune by 0.25 game pixels</div>
+<div class="dpad"><span></span><button id="up">↑ Up</button><span></span>
+<button id="left">← Left</button><button id="reset">Reset</button><button id="right">Right →</button>
+<span></span><button id="down">↓ Down</button><span></span></div>
+<div class="controls"><button class="cta" id="copyFrame">Copy this frame</button><button class="cta" id="copyAll">Copy all changes</button></div>
+<p class="help">Paste the copied coordinates into our chat. I'll update the real game on GitHub.</p>
+<div class="code" id="code">Loading…</div>
+<div class="row spread" style="margin-top:12px"><small id="count"></small><button id="discard" style="font-size:12px">Discard unsent edits</button></div>
+</section></div></main><script>
+"use strict";
+const RAW="https://raw.githubusercontent.com/CaddikLeonJ/SuperBaldioBro/main/";
+const ASSETS="https://raw.githubusercontent.com/CaddikLeonJ/SuperBaldioBro/2ff154de90a9d97d1864876ad733c0eba49e8d6b/";
+const file=n=>"FAT NAP SPRITES (CHARACTER MODELS)"+(n===0?"":" - "+n)+".png";
+const POSES=[
+{id:"crouch",name:"Crouching",ids:[31,32,33],size:1},
+{id:"idle",name:"Idle",ids:[0],size:1},
+{id:"walk",name:"Walking",ids:[4,5,6,7],size:1},
+{id:"run",name:"Running",ids:[13,14,15,16],size:.92},
+{id:"jump",name:"Jumping",ids:[35,36,37],size:1.10},
+{id:"light",name:"Lightheaded",ids:[42,40,41],size:1},
+{id:"head",name:"Headbutt",ids:[21,22,23,24],size:80/96},
+{id:"fart",name:"Fart attack",ids:[26,27,28,29],size:1},
+{id:"ko",name:"KO / Death (idle sprite)",ids:[0],size:1}
+];
+const el=id=>document.getElementById(id);
+const c=el("canvas"),x=c.getContext("2d"),cl=(v,a,b)=>Math.min(b,Math.max(a,v)),fatNapMouthDetectCache=new WeakMap();
+const st={kind:"crouch",i:0,dir:1,zoom:7,face:true,ready:false,img:null,anchor:null,W:0,H:0,ox:0,oy:0,original:{},changes:{},base:{},bounds:{},version:"",drag:false};
+const pose=()=>POSES.find(z=>z.id===st.kind),filename=()=>file(pose().ids[st.i]),key=()=>st.kind+"|"+filename(),orig=()=>st.original[key()]||{dx:0,dy:0},tune=()=>st.changes[key()]||orig(),base=()=>st.base[st.kind]||{dx:0,dy:0};
+const num=v=>Math.round(v*4)/4;
+function params(){if(!st.ready)return null;const im=st.img,b=st.bounds[filename()],s=96*pose().size/im.naturalHeight;
+ return{s:s,x:-im.naturalWidth*s/2,y:-(b?b[3]:im.naturalHeight)*s,w:im.naturalWidth*s,h:im.naturalHeight*s}}
+function autoMouth(){const a=params();return a?{x:a.x+st.anchor.x*a.s,y:a.y+st.anchor.y*a.s}:null}
+function mouth(){const a=autoMouth();return a?{x:a.x+base().dx+tune().dx,y:a.y+base().dy+tune().dy}:null}
+function sizeCanvas(){const rect=c.getBoundingClientRect(),d=Math.min(3,devicePixelRatio||1);st.W=rect.width;st.H=rect.height;c.width=Math.round(st.W*d);c.height=Math.round(st.H*d);x.setTransform(d,0,0,d,0,0)}
+function draw(){
+ if(!st.W)sizeCanvas();
+ const W=st.W,H=st.H,z=st.zoom,m=mouth();
+ st.ox=st.face&&m?W/2-m.x*st.dir*z:W/2;
+ st.oy=st.face&&m?H*.52-m.y*z:H*.84;
+ x.save();x.fillStyle="#101725";x.fillRect(0,0,W,H);
+ x.translate(st.ox,st.oy);x.scale(z,z);
+ const left=-st.ox/z,right=(W-st.ox)/z,top=-st.oy/z,bottom=(H-st.oy)/z;
+ for(let i=Math.floor(left/10)*10;i<right;i+=10){x.strokeStyle=i===0?"#657ea1":"#25324a";x.lineWidth=(i===0?1.2:.5)/z;x.beginPath();x.moveTo(i,top);x.lineTo(i,bottom);x.stroke()}
+ for(let i=Math.floor(top/10)*10;i<bottom;i+=10){x.strokeStyle=i===0?"#886e55":"#25324a";x.lineWidth=(i===0?1.2:.5)/z;x.beginPath();x.moveTo(left,i);x.lineTo(right,i);x.stroke()}
+ if(st.ready){const p=params(),a=autoMouth();x.save();if(st.dir<0)x.scale(-1,1);
+ x.drawImage(st.img,p.x,p.y,p.w,p.h);
+ if(a){x.strokeStyle="#6ad6ff";x.lineWidth=1.5/z;x.beginPath();x.arc(a.x,a.y,7/z,0,2*Math.PI);x.moveTo(a.x-11/z,a.y);x.lineTo(a.x+11/z,a.y);x.moveTo(a.x,a.y-11/z);x.lineTo(a.x,a.y+11/z);x.stroke()}
+ if(m){const mw=(641*(82/1027))*.095,mh=1.15+.7*3.9;x.fillStyle="#351414";x.beginPath();x.ellipse(m.x,m.y,mw/2,mh/2,0,0,2*Math.PI);x.fill();x.fillStyle="#d97878";x.beginPath();x.ellipse(m.x,m.y+mh*.12,mw*.28,mh*.18,0,0,2*Math.PI);x.fill();x.strokeStyle="#ff65a3";x.lineWidth=1.6/z;x.beginPath();x.arc(m.x,m.y,11/z,0,2*Math.PI);x.moveTo(m.x-18/z,m.y);x.lineTo(m.x+18/z,m.y);x.moveTo(m.x,m.y-18/z);x.lineTo(m.x,m.y+18/z);x.stroke()}
+ x.restore();
+ }else{x.fillStyle="#c6d4e7";x.font="3px Arial";x.textAlign="center";x.fillText("Loading sprite...",0,-10)}
+ x.restore();stats()
+}
+function stats(){
+ const t=tune(),m=mouth(),p=pose();
+ el("version").textContent="Game v"+(st.version||"…");
+ el("frameTitle").textContent=p.name+" • Frame "+(st.i+1);
+ el("fileName").textContent=filename()+(st.kind==="light"?" · Actual playback order":"");
+ el("dx").textContent=(t.dx>=0?"+":"")+t.dx.toFixed(2);
+ el("dy").textContent=(t.dy>=0?"+":"")+t.dy.toFixed(2);
+ el("posx").textContent=m?m.x.toFixed(2):"—";
+ el("posy").textContent=m?m.y.toFixed(2):"—";
+ el("zoomVal").textContent=st.zoom+"×";
+ el("mode").textContent=st.face?"Face close-up":"Whole character";
+ el("code").textContent="'"+key()+"':{dx:"+t.dx+",dy:"+t.dy+"},";
+ el("count").textContent=Object.keys(st.changes).length+" unsent frame changes";
+ el("prev").disabled=st.i===0;el("next").disabled=st.i===p.ids.length-1
+}
+function buttonFrames(){
+ el("pose").value=st.kind;const target=el("frameButtons");target.replaceChildren();
+ pose().ids.forEach((n,i)=>{const b=document.createElement("button");b.className=i===st.i?"sel":"";b.innerHTML="Frame "+(i+1)+"<small>"+n+".png</small>";b.onclick=()=>{st.i=i;buttonFrames();loadSprite()};target.append(b)});stats()
+}
+function loadSprite(){
+ st.ready=false;st.anchor=null;st.img=null;draw();const im=new Image(),selected=key();im.crossOrigin="anonymous";
+ im.onload=()=>{if(selected!==key())return;st.img=im;st.anchor=detectFatNapMouthAnchor(im,st.bounds[filename()]||null,null,st.kind);st.ready=!!st.anchor;if(!st.ready)el("status").textContent="Mouth detector could not read this sprite.";draw()};
+ im.onerror=()=>{if(selected===key())el("status").textContent="Unable to load sprite from GitHub."};
+ im.src=ASSETS+encodeURIComponent(filename())
+}
+function commitEdit(dx,dy){
+ const d={dx:cl(num(dx),-80,80),dy:cl(num(dy),-80,80)},o=orig();
+ if(d.dx===o.dx&&d.dy===o.dy)delete st.changes[key()];else st.changes[key()]=d;
+ try{localStorage.setItem("fatnap-mouthlab-edits",JSON.stringify(st.changes))}catch{}
+ draw()
+}
+function pointer(e){if(!st.ready)return;const r=c.getBoundingClientRect(),a=autoMouth();const lx=(e.clientX-r.left-st.ox)/st.zoom*st.dir,ly=(e.clientY-r.top-st.oy)/st.zoom;
+ commitEdit(lx-a.x-base().dx,ly-a.y-base().dy)}
+c.onpointerdown=e=>{st.drag=true;c.setPointerCapture(e.pointerId);pointer(e)};
+c.onpointermove=e=>{if(st.drag)pointer(e)};c.onpointerup=()=>st.drag=false;c.onpointercancel=()=>st.drag=false;
+function nudge(dx,dy){const t=tune();commitEdit(t.dx+dx*.25,t.dy+dy*.25)}
+el("up").onclick=()=>nudge(0,-1);el("down").onclick=()=>nudge(0,1);el("left").onclick=()=>nudge(-1,0);el("right").onclick=()=>nudge(1,0);
+el("reset").onclick=()=>commitEdit(orig().dx,orig().dy);
+el("zoom").oninput=e=>{st.zoom=+e.target.value;draw()};
+el("mode").onclick=()=>{st.face=!st.face;draw()};
+el("rightFace").onclick=()=>{st.dir=1;el("rightFace").className="sel";el("leftFace").className="";draw()};
+el("leftFace").onclick=()=>{st.dir=-1;el("leftFace").className="sel";el("rightFace").className="";draw()};
+el("prev").onclick=()=>{if(st.i>0){st.i--;buttonFrames();loadSprite()}};
+el("next").onclick=()=>{if(st.i<pose().ids.length-1){st.i++;buttonFrames();loadSprite()}};
+el("pose").onchange=e=>{st.kind=e.target.value;st.i=0;buttonFrames();loadSprite()};
+el("discard").onclick=()=>{if(confirm("Discard all unsent mouth adjustments?")){st.changes={};try{localStorage.removeItem("fatnap-mouthlab-edits")}catch{}draw()}};
+function exportChanges(all){
+ const keys=all?Object.keys(st.changes):[key()];
+ if(!keys.length)return "No unsent changes yet.";
+ return "Fat Nap Mouth Lab — v"+st.version+"\n"+keys.map(k=>{const d=st.changes[k]||st.original[k]||{dx:0,dy:0};return "'"+k+"':{dx:"+d.dx+",dy:"+d.dy+"}"}).join("\n")
+}
+async function copy(s){try{await navigator.clipboard.writeText(s);el("code").textContent="✓ Copied!\n"+s}catch(e){prompt("Copy these coordinates:",s)}}
+el("copyFrame").onclick=()=>copy(exportChanges(false));el("copyAll").onclick=()=>copy(exportChanges(true));
+for(const p of POSES){const o=document.createElement("option");o.value=p.id;o.textContent=p.name+" ("+p.ids.length+" frames)";el("pose").append(o)}
+try{const prev=JSON.parse(localStorage.getItem("fatnap-mouthlab-edits")||"{}");if(prev&&typeof prev==="object")st.changes=prev}catch{}
+window.onresize=()=>{sizeCanvas();draw()};
+const INITIAL={"version":"0.4.221","base":{"idle":{"dx":0,"dy":0.75,"scale":1},"walk":{"dx":2.5,"dy":-4.5,"scale":1},"run":{"dx":2.35,"dy":-5.5,"scale":1},"jump":{"dx":3,"dy":-4,"scale":1},"crouch":{"dx":0,"dy":0,"scale":1},"crawl":{"dx":0,"dy":0,"scale":1},"head":{"dx":0,"dy":0,"scale":1},"fart":{"dx":0,"dy":-2.75,"scale":1},"light":{"dx":4,"dy":2,"scale":1},"baldBang":{"dx":2.75,"dy":-4.25,"scale":1},"powered":{"dx":0,"dy":0,"scale":1},"ko":{"dx":0,"dy":0,"scale":1}},"frames":{"idle|FAT NAP SPRITES (CHARACTER MODELS).png":{"dx":0,"dy":0},"walk|FAT NAP SPRITES (CHARACTER MODELS) - 4.png":{"dx":0,"dy":0},"walk|FAT NAP SPRITES (CHARACTER MODELS) - 5.png":{"dx":0,"dy":0},"walk|FAT NAP SPRITES (CHARACTER MODELS) - 6.png":{"dx":0,"dy":0},"walk|FAT NAP SPRITES (CHARACTER MODELS) - 7.png":{"dx":0,"dy":0},"run|FAT NAP SPRITES (CHARACTER MODELS) - 13.png":{"dx":0,"dy":0},"run|FAT NAP SPRITES (CHARACTER MODELS) - 14.png":{"dx":0,"dy":0},"run|FAT NAP SPRITES (CHARACTER MODELS) - 15.png":{"dx":0,"dy":0},"run|FAT NAP SPRITES (CHARACTER MODELS) - 16.png":{"dx":0,"dy":0},"head|FAT NAP SPRITES (CHARACTER MODELS) - 21.png":{"dx":0,"dy":0},"head|FAT NAP SPRITES (CHARACTER MODELS) - 22.png":{"dx":0,"dy":0},"head|FAT NAP SPRITES (CHARACTER MODELS) - 23.png":{"dx":0,"dy":0},"head|FAT NAP SPRITES (CHARACTER MODELS) - 24.png":{"dx":0,"dy":0},"fart|FAT NAP SPRITES (CHARACTER MODELS) - 26.png":{"dx":0,"dy":0},"fart|FAT NAP SPRITES (CHARACTER MODELS) - 27.png":{"dx":0,"dy":0},"fart|FAT NAP SPRITES (CHARACTER MODELS) - 28.png":{"dx":0,"dy":0},"fart|FAT NAP SPRITES (CHARACTER MODELS) - 29.png":{"dx":0,"dy":0},"crouch|FAT NAP SPRITES (CHARACTER MODELS) - 31.png":{"dx":2,"dy":-3.5},"crouch|FAT NAP SPRITES (CHARACTER MODELS) - 32.png":{"dx":1.25,"dy":0.75},"crouch|FAT NAP SPRITES (CHARACTER MODELS) - 33.png":{"dx":3.5,"dy":0},"jump|FAT NAP SPRITES (CHARACTER MODELS) - 35.png":{"dx":0,"dy":0},"jump|FAT NAP SPRITES (CHARACTER MODELS) - 36.png":{"dx":0,"dy":0},"jump|FAT NAP SPRITES (CHARACTER MODELS) - 37.png":{"dx":0,"dy":0},"light|FAT NAP SPRITES (CHARACTER MODELS) - 40.png":{"dx":0.25,"dy":2.5},"light|FAT NAP SPRITES (CHARACTER MODELS) - 41.png":{"dx":-3.75,"dy":2.5},"light|FAT NAP SPRITES (CHARACTER MODELS) - 42.png":{"dx":2.5,"dy":-0.75},"crawl|crawl:0":{"dx":0,"dy":0},"crawl|crawl:1":{"dx":0,"dy":0},"crawl|crawl:2":{"dx":0,"dy":0},"crawl|crawl:3":{"dx":0,"dy":0},"baldBang|baldBang:0":{"dx":0,"dy":-1},"baldBang|baldBang:1":{"dx":0,"dy":0},"baldBang|baldBang:2":{"dx":0,"dy":0},"baldBang|baldBang:3":{"dx":0,"dy":0}},"bounds":{"FAT NAP SPRITES (CHARACTER MODELS) - 37.png":[761,55,2243,1349],"FAT NAP SPRITES (CHARACTER MODELS) - 32.png":[1060,474,1944,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 23.png":[533,460,2467,2196],"FAT NAP SPRITES (CHARACTER MODELS) - 29.png":[859,293,2138,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 33.png":[1019,946,1989,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 27.png":[1064,54,1931,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 6.png":[731,53,2266,2200],"FAT NAP SPRITES (CHARACTER MODELS) - 16.png":[789,54,2210,2194],"FAT NAP SPRITES (CHARACTER MODELS) - 41.png":[996,463,2017,2191],"FAT NAP SPRITES (CHARACTER MODELS) - 5.png":[1180,51,1826,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 26.png":[1074,54,1924,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 13.png":[639,51,2403,2196],"FAT NAP SPRITES (CHARACTER MODELS) - 40.png":[982,373,2024,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 28.png":[966,76,2194,2194],"FAT NAP SPRITES (CHARACTER MODELS) - 22.png":[741,220,2265,2193],"FAT NAP SPRITES (CHARACTER MODELS) - 35.png":[937,943,2071,2194],"FAT NAP SPRITES (CHARACTER MODELS) - 21.png":[974,53,2022,2192],"FAT NAP SPRITES (CHARACTER MODELS) - 31.png":[1124,54,1877,2198],"FAT NAP SPRITES (CHARACTER MODELS) - 36.png":[949,382,2050,1971],"FAT NAP SPRITES (CHARACTER MODELS) - 42.png":[1118,69,1879,2204],"FAT NAP SPRITES (CHARACTER MODELS) - 4.png":[734,51,2263,2196],"FAT NAP SPRITES (CHARACTER MODELS) - 7.png":[1170,51,1831,2198],"FAT NAP SPRITES (CHARACTER MODELS) - 15.png":[491,53,2504,2194],"FAT NAP SPRITES (CHARACTER MODELS).png":[1097,23,1909,2196],"FAT NAP SPRITES (CHARACTER MODELS) - 24.png":[967,61,2034,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 14.png":[793,53,2209,2195]}};
+function detectFatNapMouthAnchor(im,bounds=null,sourceRect=null,kind='idle'){
+ if(!im)return null;
+ let perImage=fatNapMouthDetectCache.get(im);
+ if(!perImage){perImage=new Map();fatNapMouthDetectCache.set(im,perImage)}
+ const key=(sourceRect?sourceRect.join(','):'full')+'|'+(bounds?bounds.join(','):'auto')+'|'+kind;
+ if(perImage.has(key))return perImage.get(key);
+ try{
+  const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;if(!iw||!ih)return null;
+  const sr=sourceRect||[0,0,iw,ih],bx=bounds?bounds[0]:sr[0],by=bounds?bounds[1]:sr[1],
+        br=bounds?bounds[2]:sr[0]+sr[2],bb=bounds?bounds[3]:sr[1]+sr[3],
+        bw=Math.max(1,br-bx),bh=Math.max(1,bb-by),
+        // Running has arms/hands high in the silhouette; keep its search tightly
+        // around the actual head so a hand cannot be mistaken for the face.
+        faceTop=by,faceBottom=by+bh*(kind==='run'?.38:.50),max=280,s=Math.min(1,max/Math.max(sr[2],sr[3])),
+        cw=Math.max(1,Math.round(sr[2]*s)),ch=Math.max(1,Math.round(sr[3]*s)),
+        oc=document.createElement('canvas');oc.width=cw;oc.height=ch;
+  const g=oc.getContext('2d',{willReadFrequently:true});
+  g.drawImage(im,sr[0],sr[1],sr[2],sr[3],0,0,cw,ch);
+  const d=g.getImageData(0,0,cw,ch).data,mask=new Uint8Array(cw*ch),seen=new Uint8Array(cw*ch);
+  const sx=v=>(v-sr[0])*s,sy=v=>(v-sr[1])*s;
+  const x0=cl(Math.floor(sx(bx)),0,cw-1),x1=cl(Math.ceil(sx(br)),0,cw),
+        y0=cl(Math.floor(sy(faceTop)),0,ch-1),y1=cl(Math.ceil(sy(faceBottom)),0,ch);
+  for(let yy=y0;yy<y1;yy++)for(let xx=x0;xx<x1;xx++){
+   const p=(yy*cw+xx)*4,r=d[p],gg=d[p+1],bl=d[p+2],a=d[p+3];
+   if(a>55&&r>105&&gg>58&&bl>45&&r>gg*1.08&&r>bl*1.07&&(r-Math.min(gg,bl))>12)mask[yy*cw+xx]=1
+  }
+  let best=null;
+  for(let p=0;p<mask.length;p++){
+   if(!mask[p]||seen[p])continue;
+   const q=[p];seen[p]=1;let minX=cw,minY=ch,maxX=-1,maxY=-1;
+   for(let z=0;z<q.length;z++){
+    const n=q[z],xx=n%cw,yy=(n/cw)|0;minX=Math.min(minX,xx);maxX=Math.max(maxX,xx);minY=Math.min(minY,yy);maxY=Math.max(maxY,yy);
+    for(let oy=-1;oy<=1;oy++)for(let ox=-1;ox<=1;ox++){
+     const nx=xx+ox,ny=yy+oy;if(nx<0||nx>=cw||ny<0||ny>=ch)continue;
+     const k=ny*cw+nx;if(mask[k]&&!seen[k]){seen[k]=1;q.push(k)}
+    }
+   }
+   const fw=maxX-minX+1,fh=maxY-minY+1,area=q.length,
+         cx=(minX+maxX)*.5,cy=(minY+maxY)*.5,
+         targetX=x0+(x1-x0)*(kind==='run'?.56:.50),
+         centrePenalty=Math.abs(cx-targetX)*(kind==='run'?.85:.35),
+         upperPenalty=kind==='run'?(cy-y0)*.45:0,
+         aspect=fw/Math.max(1,fh),
+         runFaceLike=kind!=='run'||(aspect>.38&&aspect<1.90&&maxY<y0+(y1-y0)*.96),
+         score=area+fw*fh*.16-centrePenalty-upperPenalty;
+   if(runFaceLike&&fw>3&&fh>4&&(!best||score>best.score))best={minX,minY,maxX,maxY,score}
+  }
+  // Run fallback is deliberately higher because the body is pitched forward.
+  // Normally the per-frame face component below wins; this only protects a frame
+  // if its skin pixels are unusually hard to detect.
+  let ax=bx+bw*.56,ay=by+bh*(kind==='run'?.24:.285);
+  if(best){
+   const fx0=best.minX,fx1=best.maxX,fy0=best.minY,fy1=best.maxY,fh=Math.max(1,fy1-fy0+1),
+         runFace=kind==='run',
+         // In the Naruto-run frames the glasses are the strongest dark feature.
+         // Search the lower face much more aggressively so we lock to the
+         // moustache/mouth instead of the eyes/glasses.
+         scanY0=Math.floor(fy0+fh*(runFace?.58:.44)),
+         scanY1=Math.floor(fy0+fh*(runFace?.94:.82)),
+         scanX0=Math.floor(fx0+(fx1-fx0)*(runFace?.20:.12)),
+         scanX1=Math.ceil(fx1-(fx1-fx0)*(runFace?.20:.12));
+   let bestRow=-1,bestScore=-1,bestCount=0,bestSum=0;
+   for(let yy=scanY0;yy<=scanY1;yy++){
+    let count=0,sumX=0;
+    for(let xx=scanX0;xx<=scanX1;xx++){
+     const p=(yy*cw+xx)*4,r=d[p],gg=d[p+1],bl=d[p+2],a=d[p+3],
+           lum=(r+gg+bl)/3;
+     if(a>80&&lum<92){count++;sumX+=xx}
+    }
+    const vertical=cl((yy-scanY0)/Math.max(1,scanY1-scanY0),0,1),
+          score=count*(runFace?(.82+vertical*.48):1);
+    if(score>bestScore){bestScore=score;bestCount=count;bestRow=yy;bestSum=sumX}
+   }
+   const faceCX=(fx0+fx1)*.5,faceCY=(fy0+fy1)*.5,
+         mouthDrop=runFace?fh*.085:fh*.055;
+   ax=sr[0]+((bestCount>=2?bestSum/bestCount:faceCX)/s);
+   ay=sr[1]+(((bestRow>=0?bestRow+mouthDrop:faceCY+fh*(runFace?.30:.18)))/s);
+  }
+  const out={x:ax,y:ay};perImage.set(key,out);return out
+ }catch(e){return null}
+}
+
+
+async function syncGame(){
+ try{
+  const r=await fetch(RAW+"SuperBaldioBro.html?v="+Date.now(),{cache:"no-store"});if(!r.ok)throw Error("GitHub "+r.status);
+  const s=await r.text(),v=s.match(/const VERSION='([^']+)'/),b=s.match(/const FAT_NAP_MOUTH_TUNE=\{([\s\S]*?)\};/),f=s.match(/const FAT_NAP_MOUTH_FRAME_TUNE=\{([\s\S]*?)\};/),bb=s.match(/const MOTION_BOUNDS=(\{[^\n]*\});/);
+  if(!v||!b||!f||!bb)throw Error("Mouth data not found");
+  const base={},frames={};
+  for(const m of b[1].matchAll(/(\w+):\{dx:([-.\d]+),dy:([-.\d]+),scale:([-.\d]+)\}/g))base[m[1]]={dx:+m[2],dy:+m[3],scale:+m[4]};
+  for(const m of f[1].matchAll(/'([^']+)':\{dx:([-.\d]+),dy:([-.\d]+)\}/g))frames[m[1]]={dx:+m[2],dy:+m[3]};
+  st.base=base;st.original=frames;st.bounds=JSON.parse(bb[1]);st.version=v[1];
+  el("status").textContent="✓ Live offsets loaded from game v"+st.version;
+ }catch(e){el("status").textContent="Offline: using embedded settings (v"+st.version+"). "+e.message}
+ buttonFrames();loadSprite()
+}
+st.base=INITIAL.base;st.original=INITIAL.frames;st.bounds=INITIAL.bounds;st.version=INITIAL.version;syncGame();</script></body></html>
