@@ -207,6 +207,7 @@ canvas{display:block;width:100%;height:clamp(330px,56vw,520px);cursor:crosshair;
 </style></head><body><main>
 <header><div><div class="over">Super Baldio Bros · Developer tool</div><h1>Fat Nap <span style="color:#f4c778">Mouth Lab</span> 👄</h1><p>Position every talking mouth without loading the game.</p></div><span class="ver" id="version">Loading…</span></header>
 <div class="layout"><aside class="card stack">
+<div><label for="form">Fat Nap form</label><select id="form"><option value="normal">Normal Fat Nap</option><option value="powered">6'4 280 — Powered Fat Nap</option></select></div>
 <div><label for="pose">Choose animation</label><select id="pose"></select></div>
 <div><label>Choose actual gameplay frame</label><div id="frameButtons" class="frames"></div></div>
 <div><label>Direction</label><div class="controls"><button id="rightFace" class="sel">→ Facing right</button><button id="leftFace">← Facing left</button></div></div>
@@ -256,33 +257,57 @@ const POSES=[
 {id:"fart",name:"Fart attack",ids:[26,27,28,29],size:1},
 {id:"ko",name:"KO / Death (idle sprite)",ids:[0],size:1},
 {id:"crawl",name:"Crawling",ids:[0,1,2,3],size:1},
-{id:"baldBang",name:"Bald Bang",ids:[0,1,2,3],size:1}
+{id:"baldBang",name:"Bald Bang",ids:[0,1,2,3],size:1},
+{id:"transform",name:"Clout Power transformation",ids:[0,1,2,3,4,5],size:1,form:"powered"},
+{id:"powerIdle",name:"6'4 280 — Idle",ids:[0],size:1,form:"powered"},
+{id:"powerWalk",name:"6'4 280 — Walking",ids:[0,1,2,3],size:1,form:"powered"},
+{id:"powerRun",name:"6'4 280 — Running",ids:[0,1,2,3],size:1,form:"powered"},
+{id:"powerScream",name:"6'4 280 — Power Scream",ids:[0],size:1,form:"powered"}
 ];
 const el=id=>document.getElementById(id);
 const c=el("canvas"),x=c.getContext("2d"),cl=(v,a,b)=>Math.min(b,Math.max(a,v)),fatNapMouthDetectCache=new WeakMap();
-const st={kind:"crouch",i:0,dir:1,zoom:7,face:true,selected:true,controlMode:"move",activePad:null,talking:false,talkStart:0,talkRaf:0,talkLevel:.7,markersVisible:true,panEnabled:true,panX:0,panY:0,panPointer:null,viewFocus:null,spriteError:"",zoomInitialized:false,ready:false,img:null,sheetFrame:null,anchor:null,W:0,H:0,ox:0,oy:0,original:{},changes:{},base:{},bounds:{},version:"",drag:false};
-const pose=()=>POSES.find(z=>z.id===st.kind),filename=()=>st.kind==="crawl"||st.kind==="baldBang"?st.kind+":"+pose().ids[st.i]:file(pose().ids[st.i]),key=()=>st.kind+"|"+filename(),orig=()=>({dx:0,dy:0,w:.85,h:.5,r:0,...(st.original[key()]||{})}),tune=()=>({...orig(),...(st.changes[key()]||{})}),base=()=>st.base[st.kind]||{dx:0,dy:0};
+const st={kind:"crouch",form:"normal",i:0,dir:1,zoom:7,face:true,selected:true,controlMode:"move",activePad:null,talking:false,talkStart:0,talkRaf:0,talkLevel:.7,markersVisible:true,panEnabled:true,panX:0,panY:0,panPointer:null,viewFocus:null,spriteError:"",zoomInitialized:false,ready:false,img:null,sheetFrame:null,anchor:null,W:0,H:0,ox:0,oy:0,original:{},changes:{},base:{},bounds:{},version:"",drag:false};
+const pose=()=>POSES.find(z=>z.id===st.kind);
+const isPoweredKind=kind=>["powerIdle","powerWalk","powerRun","powerScream"].includes(kind);
+const isSpecialKind=kind=>kind==="crawl"||kind==="baldBang"||kind==="transform"||isPoweredKind(kind);
+const filename=()=>isSpecialKind(st.kind)?st.kind+":"+pose().ids[st.i]:file(pose().ids[st.i]);
+const key=()=> (isPoweredKind(st.kind)?"powered":st.kind)+"|"+filename();
+const orig=()=>({dx:0,dy:0,w:.85,h:.5,r:0,...(st.original[key()]||{})}),tune=()=>({...orig(),...(st.changes[key()]||{})});
+const base=()=>st.base[isPoweredKind(st.kind)?"powered":st.kind]||{dx:0,dy:0};
 const num=v=>Math.round(v*100)/100;
 function params(){
  if(!st.ready||!st.img)return null;
  const im=st.img,iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height,b=st.bounds[filename()];
  if(st.kind==="baldBang"&&st.sheetFrame){
-  // Match the game: place each cleaned sheet frame by its BODY, not by
-  // its image box, keeping the head stable through the beanie animation.
   const frame=st.sheetFrame,scale=96*pose().size/Math.max(1,frame.bodyH);
-  return{s:scale,x:-frame.bodyCx*scale,y:-frame.bodyBottom*scale,w:iw*scale,h:ih*scale}
+  return{s:scale,sx:scale,sy:scale,x:-frame.bodyCx*scale,y:-frame.bodyBottom*scale,w:iw*scale,h:ih*scale}
  }
  if(st.kind==="crawl"){
-  // Same crop dimensions and scale as the actual crawling animation.
   const crouchBounds=st.bounds[file(33)]||[1019,946,1989,2197];
-  const crouchBaseH=(crouchBounds[3]-crouchBounds[1])*(96/2200);
-  const scale=crouchBaseH/633;
-  return{s:scale,x:-iw*scale/2,y:-ih*scale,w:iw*scale,h:ih*scale}
+  const scale=(crouchBounds[3]-crouchBounds[1])*(96/2200)/633;
+  return{s:scale,sx:scale,sy:scale,x:-iw*scale/2,y:-ih*scale,w:iw*scale,h:ih*scale}
+ }
+ if(st.kind==="transform"){
+  // Matches drawTransformingFatNap: frame-dependent sprite height.
+  const i=st.i,targetH=i<2?82:i===2?86:92,scale=targetH/ih;
+  return{s:scale,sx:scale,sy:scale,x:-iw*scale/2,y:-targetH,w:iw*scale,h:targetH}
+ }
+ if(isPoweredKind(st.kind)){
+  if(st.kind==="powerScream"){
+   const scale=96/ih,anchor=st.sheetFrame?.anchorBottom??ih;
+   return{s:scale,sx:scale,sy:scale,x:-iw*scale/2,y:-anchor*scale,w:iw*scale,h:ih*scale}
+  }
+  // Match poweredMotionSprite's alpha bounding-box and body anchoring.
+  const bounds=editorPoweredBounds(im)||{x:0,y:0,w:iw,h:ih,bottom:ih};
+  const targetH=st.kind==="powerRun"?84:st.kind==="powerWalk"?94:96;
+  const targetW=st.kind==="powerWalk"?88:targetH;
+  const scaleX=targetW/Math.max(1,bounds.h),scaleY=targetH/Math.max(1,bounds.h);
+  return{s:scaleY,sx:scaleX,sy:scaleY,x:-(bounds.x+bounds.w/2)*scaleX,y:-bounds.bottom*scaleY,w:iw*scaleX,h:ih*scaleY}
  }
  const scale=96*pose().size/ih;
- return{s:scale,x:-iw*scale/2,y:-(b?b[3]:ih)*scale,w:iw*scale,h:ih*scale}
+ return{s:scale,sx:scale,sy:scale,x:-iw*scale/2,y:-(b?b[3]:ih)*scale,w:iw*scale,h:ih*scale}
 }
-function autoMouth(){const a=params();return a&&st.anchor?{x:a.x+st.anchor.x*a.s,y:a.y+st.anchor.y*a.s}:null}
+function autoMouth(){const a=params();return a&&st.anchor?{x:a.x+st.anchor.x*(a.sx??a.s),y:a.y+st.anchor.y*(a.sy??a.s)}:null}
 function mouth(){const a=autoMouth();return a?{x:a.x+base().dx+tune().dx,y:a.y+base().dy+tune().dy}:null}
 function fallbackFaceAnchor(im){
  const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
@@ -314,8 +339,9 @@ function frameFullZoom(){
  const p=params();if(!p)return 2;
  const iw=st.img.naturalWidth||st.img.width,ih=st.img.naturalHeight||st.img.height;
  const b=st.bounds[filename()]||[0,0,iw,ih];
- const bodyW=Math.max(8,(st.kind==="crawl"||st.kind==="baldBang"?iw:b[2]-b[0])*p.s);
- const bodyH=Math.max(8,(st.kind==="crawl"||st.kind==="baldBang"?ih:b[3]-b[1])*p.s);
+ const cropKinds=isSpecialKind(st.kind);
+ const bodyW=Math.max(8,(cropKinds?iw:b[2]-b[0])*(p.sx??p.s));
+ const bodyH=Math.max(8,(cropKinds?ih:b[3]-b[1])*(p.sy??p.s));
  return Math.max(1,Math.min(7,Math.min((st.W-26)/bodyW,(st.H-24)/bodyH)))
 }
 function sizeCanvas(){const rect=c.getBoundingClientRect(),d=Math.min(3,devicePixelRatio||1);st.W=rect.width;st.H=rect.height;c.width=Math.round(st.W*d);c.height=Math.round(st.H*d);x.setTransform(d,0,0,d,0,0)}
@@ -476,7 +502,7 @@ function stats(){
 }
 function buttonFrames(){
  el("pose").value=st.kind;const target=el("frameButtons");target.replaceChildren();
- pose().ids.forEach((n,i)=>{const b=document.createElement("button");b.className=i===st.i?"sel":"";b.innerHTML="Frame "+(i+1)+"<small>"+(st.kind==="crawl"||st.kind==="baldBang"?"sheet "+(i+1):n+".png")+"</small>";b.onclick=()=>{st.i=i;buttonFrames();loadSprite()};target.append(b)});stats()
+ pose().ids.forEach((n,i)=>{const b=document.createElement("button");b.className=i===st.i?"sel":"";b.innerHTML="Frame "+(i+1)+"<small>"+(isSpecialKind(st.kind)?"sprite "+(i+1):n+".png")+"</small>";b.onclick=()=>{st.i=i;buttonFrames();loadSprite()};target.append(b)});stats()
 }
 
 // Sprite sheets used by the game. These are extracted from the exact ZIP
@@ -642,12 +668,144 @@ async function editorBuildSheet(kind){
  }
  throw Error("Unknown sprite sheet: "+kind)
 }
+function editorGetPowered(kind){
+ if(!editorSheetCache[kind])editorSheetCache[kind]=editorBuildPowered(kind).catch(e=>{delete editorSheetCache[kind];throw e});
+ return editorSheetCache[kind]
+}
 function editorGetSheet(kind){
  if(!editorSheetCache[kind]){
   editorSheetCache[kind]=editorBuildSheet(kind).catch(e=>{delete editorSheetCache[kind];throw e})
  }
  return editorSheetCache[kind]
 }
+
+// 6'4 280 form: use the same ZIP filenames, frame extraction and atlas crop
+// rectangles as the running Super Baldio Bros game.
+const EDITOR_POWERED_ZIPS={
+ powerIdle:["AyofatnapIdle64280.zip",1],
+ powerWalk:["AyofatnapWalk64280.zip",4],
+ powerRun:["AyofatnapRun64280.zip",4],
+ powerScream:["AyofatnapPowerUpScream64280.zip",1]
+};
+const EDITOR_TRANSFORM_RECTS=[[50,23,538,1085],[719,76,641,1027],[1494,110,674,993],[714,1150,641,1077],[1512,1126,620,1106],[2277,1080,679,1157]];
+let poweredScreamCrop=null;
+const poweredBoundsCache=new WeakMap();
+function editorPoweredBounds(im){
+ if(!im)return null;
+ const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+ if(!iw||!ih)return null;
+ if(poweredBoundsCache.has(im))return poweredBoundsCache.get(im);
+ try{
+  const max=520,s=Math.min(1,max/Math.max(iw,ih)),w=Math.max(1,Math.round(iw*s)),h=Math.max(1,Math.round(ih*s)),oc=document.createElement('canvas');
+  oc.width=w;oc.height=h;const g=oc.getContext('2d',{willReadFrequently:true});g.drawImage(im,0,0,w,h);
+  const d=g.getImageData(0,0,w,h).data;let minX=w,minY=h,maxX=-1,maxY=-1;
+  for(let y=0;y<h;y++)for(let x0=0;x0<w;x0++)if(d[(y*w+x0)*4+3]>20){
+   if(x0<minX)minX=x0;if(x0>maxX)maxX=x0;if(y<minY)minY=y;if(y>maxY)maxY=y
+  }
+  let b;
+  if(maxX>=minX&&maxY>=minY){
+   const pad=2,x=Math.max(0,minX-pad)/s,y=Math.max(0,minY-pad)/s,right=(Math.min(w-1,maxX+pad)+1)/s,bottom=(Math.min(h-1,maxY+pad)+1)/s;
+   b={x,y,w:right-x,h:bottom-y,bottom}
+  }else b={x:0,y:0,w:iw,h:ih,bottom:ih};
+  poweredBoundsCache.set(im,b);return b
+ }catch(e){
+  const b={x:0,y:0,w:iw,h:ih,bottom:ih};poweredBoundsCache.set(im,b);return b
+ }
+}
+function editorPoweredScreamCrop(im){
+ if(poweredScreamCrop)return poweredScreamCrop;
+ try{
+  const cols=80,rows=Math.max(1,Math.round(cols*im.naturalHeight/im.naturalWidth)),oc=document.createElement('canvas');
+  oc.width=cols;oc.height=rows;const g=oc.getContext('2d',{willReadFrequently:true});g.drawImage(im,0,0,cols,rows);
+  const d=g.getImageData(0,0,cols,rows).data,mask=new Uint8Array(cols*rows);
+  for(let y=0;y<rows;y++)for(let x0=0;x0<cols;x0++){let on=0;for(let yy=Math.max(0,y-1);yy<=Math.min(rows-1,y+1)&&!on;yy++)for(let xx=Math.max(0,x0-1);xx<=Math.min(cols-1,x0+1);xx++)if(d[(yy*cols+xx)*4+3]>18){on=1;break}mask[y*cols+x0]=on}
+  const seen=new Uint8Array(mask.length);let best=null;
+  for(let y=0;y<rows;y++)for(let x0=0;x0<cols;x0++){const k=y*cols+x0;if(!mask[k]||seen[k])continue;const q=[k];seen[k]=1;let qi=0,n=0,minX=x0,maxX=x0,minY=y,maxY=y;
+   while(qi<q.length){const z=q[qi++],zx=z%cols,zy=(z/cols)|0;n++;minX=Math.min(minX,zx);maxX=Math.max(maxX,zx);minY=Math.min(minY,zy);maxY=Math.max(maxY,zy);
+    for(let yy=Math.max(0,zy-2);yy<=Math.min(rows-1,zy+2);yy++)for(let xx=Math.max(0,zx-2);xx<=Math.min(cols-1,zx+2);xx++){const j=yy*cols+xx;if(mask[j]&&!seen[j]){seen[j]=1;q.push(j)}}}
+   const area=(maxX-minX+1)*(maxY-minY+1),score=n+area*.15;if(!best||score>best.score)best={score,minX,maxX,minY,maxY}
+  }
+  if(!best)throw 0;
+  const px=im.naturalWidth/cols,py=im.naturalHeight/rows,pad=4;
+  poweredScreamCrop={x:Math.max(0,(best.minX-pad)*px),y:Math.max(0,(best.minY-pad)*py),w:Math.min(im.naturalWidth,(best.maxX+1+pad)*px)-Math.max(0,(best.minX-pad)*px),h:Math.min(im.naturalHeight,(best.maxY+1+pad)*py)-Math.max(0,(best.minY-pad)*py)}
+ }catch(e){poweredScreamCrop={x:0,y:0,w:im.naturalWidth,h:im.naturalHeight}}
+ return poweredScreamCrop
+}
+async function editorLoadPoweredZip(file,target,needed,setReady){
+ try{
+  const url='https://raw.githubusercontent.com/CaddikLeonJ/SuperBaldioBro/main/'+encodeURI(file);
+  const zip=await fetch(url,{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error(file+' '+r.status);return r.arrayBuffer()});
+  const entries=await unzipPNGEntries(zip);
+  if(!entries.length)throw new Error(file+' contains no PNG');
+  const loadEntry=e=>new Promise((resolve,reject)=>{
+   const im=new Image(),u=URL.createObjectURL(new Blob([e.blob],{type:'image/png'}));
+   im.onload=()=>{URL.revokeObjectURL(u);resolve(im)};im.onerror=()=>{URL.revokeObjectURL(u);reject(new Error('PNG decode '+e.name))};im.src=u
+  });
+  if(entries.length>=needed){
+   const imgs=await Promise.all(entries.slice(0,needed).map(loadEntry));
+   target.splice(0,target.length,...imgs)
+  }else if(entries.length===1&&needed>1){
+   const sheet=await loadEntry(entries[0]),frames=[];
+   // Find complete character silhouettes across the whole sheet; do not assume equal frame columns.
+   const pw=Math.min(720,sheet.naturalWidth),ph=Math.max(1,Math.round(pw*sheet.naturalHeight/sheet.naturalWidth)),probe=document.createElement('canvas');
+   probe.width=pw;probe.height=ph;const pg=probe.getContext('2d',{willReadFrequently:true});pg.drawImage(sheet,0,0,pw,ph);
+   const d=pg.getImageData(0,0,pw,ph).data,mask=new Uint8Array(pw*ph);
+   for(let y=0;y<ph;y++)for(let x0=0;x0<pw;x0++)if(d[(y*pw+x0)*4+3]>18)mask[y*pw+x0]=1;
+   // A small dilation joins nearby body parts within one sprite without merging well-separated frames.
+   const dil=new Uint8Array(mask.length),rad=2;
+   for(let y=0;y<ph;y++)for(let x0=0;x0<pw;x0++)if(mask[y*pw+x0])for(let yy=Math.max(0,y-rad);yy<=Math.min(ph-1,y+rad);yy++)for(let xx=Math.max(0,x0-rad);xx<=Math.min(pw-1,x0+rad);xx++)dil[yy*pw+xx]=1;
+   const seen=new Uint8Array(dil.length),parts=[];let componentId=0;const owner=new Int16Array(dil.length);owner.fill(-1);
+   for(let y=0;y<ph;y++)for(let x0=0;x0<pw;x0++){const k=y*pw+x0;if(!dil[k]||seen[k])continue;
+    const q=[k];seen[k]=1;let qi=0,n=0,minX=x0,maxX=x0,minY=y,maxY=y;const id=componentId++;
+    while(qi<q.length){const z=q[qi++],zx=z%pw,zy=(z/pw)|0;owner[z]=id;n++;minX=Math.min(minX,zx);maxX=Math.max(maxX,zx);minY=Math.min(minY,zy);maxY=Math.max(maxY,zy);
+     for(let yy=Math.max(0,zy-1);yy<=Math.min(ph-1,zy+1);yy++)for(let xx=Math.max(0,zx-1);xx<=Math.min(pw-1,zx+1);xx++){const nk=yy*pw+xx;if(dil[nk]&&!seen[nk]){seen[nk]=1;q.push(nk)}}
+    }
+    const w=maxX-minX+1,h=maxY-minY+1;
+    if(h>ph*.34&&w>pw*.045)parts.push({id,minX,maxX,minY,maxY,w,h,n,score:n*h})
+   }
+   parts.sort((a,b)=>b.score-a.score);const chars=parts.slice(0,needed).sort((a,b)=>(a.minX+a.maxX)-(b.minX+b.maxX));
+   if(chars.length<needed)throw new Error(file+' could not isolate '+needed+' character silhouettes');
+   const rx=sheet.naturalWidth/pw,ry=sheet.naturalHeight/ph;
+   for(const p of chars){
+    const padX=2,padY=2,sx=Math.max(0,Math.floor((p.minX+rad-padX)*rx)),sy=Math.max(0,Math.floor((p.minY+rad-padY)*ry)),ex=Math.min(sheet.naturalWidth,Math.ceil((p.maxX-rad+1+padX)*rx)),ey=Math.min(sheet.naturalHeight,Math.ceil((p.maxY-rad+1+padY)*ry)),cw=Math.max(1,ex-sx),ch=Math.max(1,ey-sy);
+    const oc=document.createElement('canvas');oc.width=cw;oc.height=ch;const og=oc.getContext('2d',{willReadFrequently:true});og.drawImage(sheet,sx,sy,cw,ch,0,0,cw,ch);
+    // Keep only pixels whose probe position belongs to this character component.
+    const od=og.getImageData(0,0,cw,ch);
+    for(let yy=0;yy<ch;yy++)for(let xx=0;xx<cw;xx++){const gx=sx+xx,gy=sy+yy,px=Math.max(0,Math.min(pw-1,Math.floor(gx/rx))),py=Math.max(0,Math.min(ph-1,Math.floor(gy/ry))),oi=(yy*cw+xx)*4;if(owner[py*pw+px]!==p.id)od.data[oi+3]=0}
+    og.putImageData(od,0,0);frames.push(oc)
+   }
+   target.splice(0,target.length,...frames)
+  }else throw new Error(file+' expected '+needed+' frames, found '+entries.length+' PNGs');
+  setReady(target.length>=needed)
+ }catch(e){console.error('Powered sprite ZIP failed',file,e);setReady(false)}
+}
+
+async function editorBuildPowered(kind){
+ if(kind==="transform"){
+  const entries=await editorReadZip("AyofatnapPowerUp.zip");
+  const power=entries.find(e=>e.name.split("/").pop().toLowerCase()==="ayofatnap power up.png");
+  if(!power)throw Error("Power-up transformation sprite sheet missing");
+  const sheet=await editorSheetImage(power.blob);
+  return EDITOR_TRANSFORM_RECTS.map(([sx,sy,sw,sh],i)=>{
+   if(sx+sw>sheet.naturalWidth||sy+sh>sheet.naturalHeight)throw Error("Transform sprite bounds have changed");
+   const cv=document.createElement("canvas");cv.width=sw;cv.height=sh;
+   cv.getContext("2d").drawImage(sheet,sx,sy,sw,sh,0,0,sw,sh);
+   return {img:cv,transformIdx:i}
+  })
+ }
+ if(!(kind in EDITOR_POWERED_ZIPS))throw Error("Unrecognized powered animation "+kind);
+ const [zip,needed]=EDITOR_POWERED_ZIPS[kind],images=[];
+ await editorLoadPoweredZip(zip,images,needed,()=>{});
+ if(images.length!==needed)throw Error("Expected "+needed+" powered frames for "+kind+"; got "+images.length);
+ if(kind!=="powerScream")return images.map(img=>({img}));
+ // The game renders just the largest character component of its scream PNG.
+ const im=images[0],cr=editorPoweredScreamCrop(im);
+ const cv=document.createElement("canvas");cv.width=Math.max(1,Math.round(cr.w));cv.height=Math.max(1,Math.round(cr.h));
+ cv.getContext("2d").drawImage(im,cr.x,cr.y,cr.w,cr.h,0,0,cv.width,cv.height);
+ const b=editorPoweredBounds(cv);
+ return [{img:cv,anchorBottom:b?.bottom??cv.height}]
+}
+
 function finishSpriteLoad(im,selected,frame=null){
  if(selected!==key())return;
  st.img=im;st.sheetFrame=frame;
@@ -657,6 +815,10 @@ function finishSpriteLoad(im,selected,frame=null){
  const valid=found&&Number.isFinite(found.x)&&Number.isFinite(found.y)&&
    found.x>=bounds[0]&&found.x<=bounds[2]&&found.y>=bounds[1]&&found.y<=bounds[3];
  st.anchor=valid?found:fallbackFaceAnchor(im);
+ if(st.kind==="transform"&&(st.i===1||st.i===2)){
+  // Exact authored mouth anchor from the game transformation renderer.
+  st.anchor={x:iw*(st.i===2?.675:.755),y:ih*(st.i===2?.305:.275)}
+ }
  st.ready=true;st.spriteError="";
  sizeCanvas();
  if(!st.zoomInitialized)setPreviewZoom(centeredZoom(im),false);
@@ -670,16 +832,16 @@ function loadSprite(){
  if(st.talking)st.talkStart=performance.now();
  resetCameraForFrame();st.ready=false;st.anchor=null;st.img=null;st.sheetFrame=null;st.spriteError="";draw();
  const selected=key();
- if(st.kind==="crawl"||st.kind==="baldBang"){
+ if(isSpecialKind(st.kind)){
   const kind=st.kind,idx=st.i;
-  editorGetSheet(kind).then(frames=>{
+  (kind==="crawl"||kind==="baldBang"?editorGetSheet(kind):editorGetPowered(kind)).then(frames=>{
    if(selected!==key())return;
    const frame=frames[idx];
    if(!frame?.img)throw Error("Missing "+kind+" frame "+(idx+1));
-   finishSpriteLoad(frame.img,selected,kind==="baldBang"?frame:null)
+   finishSpriteLoad(frame.img,selected,frame)
   }).catch(e=>{
    if(selected!==key())return;
-   st.spriteError="Could not load "+(kind==="crawl"?"Crawling":"Bald Bang")+" sprite sheet";
+   st.spriteError="Could not load "+kind+" animation assets";
    el("status").textContent=st.spriteError+": "+e.message;draw()
   });
   return
@@ -817,6 +979,19 @@ el("leftFace").onclick=()=>{st.dir=-1;el("leftFace").className="sel";el("rightFa
 el("flipMobile").onclick=()=>el(st.dir===1?"leftFace":"rightFace").click();
 el("prev").onclick=()=>{if(st.i>0){st.i--;buttonFrames();loadSprite()}};
 el("next").onclick=()=>{if(st.i<pose().ids.length-1){st.i++;buttonFrames();loadSprite()}};
+function refreshPoses(){
+ const selector=el("pose");selector.replaceChildren();
+ for(const p of POSES.filter(p=>(p.form||"normal")===st.form)){
+  const o=document.createElement("option");o.value=p.id;o.textContent=p.name+" ("+p.ids.length+" frames)";
+  selector.append(o)
+ }
+ selector.value=st.kind
+}
+el("form").onchange=e=>{
+ st.form=e.target.value;
+ st.kind=POSES.find(p=>(p.form||"normal")===st.form).id;
+ st.i=0;refreshPoses();buttonFrames();loadSprite()
+};
 el("pose").onchange=e=>{st.kind=e.target.value;st.i=0;buttonFrames();loadSprite()};
 el("discard").onclick=()=>{if(confirm("Discard all unsent mouth adjustments?")){st.changes={};try{localStorage.removeItem("fatnap-mouthlab-edits")}catch{}draw()}};
 function exportChanges(all){
@@ -826,10 +1001,10 @@ function exportChanges(all){
 }
 async function copy(s){try{await navigator.clipboard.writeText(s);el("code").textContent="✓ Copied!\n"+s}catch(e){prompt("Copy these coordinates:",s)}}
 el("copyFrame").onclick=()=>copy(exportChanges(false));el("copyAll").onclick=()=>copy(exportChanges(true));
-for(const p of POSES){const o=document.createElement("option");o.value=p.id;o.textContent=p.name+" ("+p.ids.length+" frames)";el("pose").append(o)}
+refreshPoses();
 try{const prev=JSON.parse(localStorage.getItem("fatnap-mouthlab-edits")||"{}");if(prev&&typeof prev==="object")st.changes=prev}catch{}
 window.onresize=()=>{sizeCanvas();draw()};
-const INITIAL={"version":"0.4.229","base":{"idle":{"dx":0,"dy":0.75,"scale":1},"walk":{"dx":2.5,"dy":-4.5,"scale":1},"run":{"dx":2.35,"dy":-5.5,"scale":1},"jump":{"dx":3,"dy":-4,"scale":1},"crouch":{"dx":0,"dy":0,"scale":1},"crawl":{"dx":0,"dy":0,"scale":1},"head":{"dx":0,"dy":0,"scale":1},"fart":{"dx":0,"dy":-2.75,"scale":1},"light":{"dx":4,"dy":2,"scale":1},"baldBang":{"dx":2.75,"dy":-4.25,"scale":1},"powered":{"dx":0,"dy":0,"scale":1},"ko":{"dx":0,"dy":0,"scale":1}},"frames":{"idle|FAT NAP SPRITES (CHARACTER MODELS).png":{"dx":0,"dy":-0.5,"w":0.9,"h":0.5,"r":-2},"walk|FAT NAP SPRITES (CHARACTER MODELS) - 4.png":{"dx":0.75,"dy":0,"w":0.85,"h":0.5,"r":-5},"walk|FAT NAP SPRITES (CHARACTER MODELS) - 5.png":{"dx":0.5,"dy":-0.25,"w":0.85,"h":0.5,"r":-7},"walk|FAT NAP SPRITES (CHARACTER MODELS) - 6.png":{"dx":0.25,"dy":-0.25,"w":0.85,"h":0.5,"r":-6},"walk|FAT NAP SPRITES (CHARACTER MODELS) - 7.png":{"dx":-0.25,"dy":-0.25,"w":0.85,"h":0.5,"r":-6},"run|FAT NAP SPRITES (CHARACTER MODELS) - 13.png":{"dx":0,"dy":0,"w":0.9,"h":0.5,"r":-5},"run|FAT NAP SPRITES (CHARACTER MODELS) - 14.png":{"dx":0.25,"dy":-0.25,"w":0.9,"h":0.5,"r":-5},"run|FAT NAP SPRITES (CHARACTER MODELS) - 15.png":{"dx":0.25,"dy":0,"w":0.9,"h":0.5,"r":-5},"run|FAT NAP SPRITES (CHARACTER MODELS) - 16.png":{"dx":0,"dy":-0.25,"w":0.9,"h":0.5,"r":-6},"head|FAT NAP SPRITES (CHARACTER MODELS) - 21.png":{"dx":2.75,"dy":-4,"w":0.7,"h":0.5,"r":-7},"head|FAT NAP SPRITES (CHARACTER MODELS) - 22.png":{"dx":1.5,"dy":0,"w":0.7,"h":0.5,"r":-4},"head|FAT NAP SPRITES (CHARACTER MODELS) - 23.png":{"dx":37.07,"dy":3.78,"w":0.5,"h":0.5,"r":29},"head|FAT NAP SPRITES (CHARACTER MODELS) - 24.png":{"dx":2.06,"dy":-3.96,"w":0.7,"h":0.5,"r":-4},"fart|FAT NAP SPRITES (CHARACTER MODELS) - 26.png":{"dx":-1.25,"dy":3,"w":0.8,"h":0.5,"r":12},"fart|FAT NAP SPRITES (CHARACTER MODELS) - 27.png":{"dx":2,"dy":2.25,"w":0.85,"h":0.5,"r":-4},"fart|FAT NAP SPRITES (CHARACTER MODELS) - 28.png":{"dx":1,"dy":4.5,"w":1.3,"h":0.5,"r":-26},"fart|FAT NAP SPRITES (CHARACTER MODELS) - 29.png":{"dx":2.67,"dy":4.02,"w":1.35,"h":0.5,"r":-40},"ko|FAT NAP SPRITES (CHARACTER MODELS).png":{"dx":0,"dy":0.25,"w":0.9,"h":0.5,"r":-3},"crouch|FAT NAP SPRITES (CHARACTER MODELS) - 31.png":{"dx":2.5,"dy":-4,"w":0.8,"h":0.5,"r":-3},"crouch|FAT NAP SPRITES (CHARACTER MODELS) - 32.png":{"dx":1.25,"dy":0.25,"w":0.8,"h":0.5,"r":-3},"crouch|FAT NAP SPRITES (CHARACTER MODELS) - 33.png":{"dx":4.25,"dy":-0.5,"w":0.85,"h":0.5,"r":-5},"jump|FAT NAP SPRITES (CHARACTER MODELS) - 35.png":{"dx":1.58,"dy":6.78,"w":0.85,"h":0.5,"r":-7},"jump|FAT NAP SPRITES (CHARACTER MODELS) - 36.png":{"dx":0,"dy":0,"w":0.8,"h":0.5,"r":-8},"jump|FAT NAP SPRITES (CHARACTER MODELS) - 37.png":{"dx":40.36,"dy":-4.63,"w":0.85,"h":0.5,"r":-6},"light|FAT NAP SPRITES (CHARACTER MODELS) - 40.png":{"dx":0.25,"dy":2,"w":0.75,"h":0.5,"r":0},"light|FAT NAP SPRITES (CHARACTER MODELS) - 41.png":{"dx":-4,"dy":2.5,"w":0.7,"h":0.5,"r":11},"light|FAT NAP SPRITES (CHARACTER MODELS) - 42.png":{"dx":2.5,"dy":-1,"w":0.85,"h":0.5,"r":-14},"crawl|crawl:0":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0},"crawl|crawl:1":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0},"crawl|crawl:2":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0},"crawl|crawl:3":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0},"baldBang|baldBang:0":{"dx":0,"dy":-1,"w":0.85,"h":0.5,"r":0},"baldBang|baldBang:1":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0},"baldBang|baldBang:2":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0},"baldBang|baldBang:3":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0}},"bounds":{"FAT NAP SPRITES (CHARACTER MODELS) - 37.png":[761,55,2243,1349],"FAT NAP SPRITES (CHARACTER MODELS) - 32.png":[1060,474,1944,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 23.png":[533,460,2467,2196],"FAT NAP SPRITES (CHARACTER MODELS) - 29.png":[859,293,2138,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 33.png":[1019,946,1989,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 27.png":[1064,54,1931,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 6.png":[731,53,2266,2200],"FAT NAP SPRITES (CHARACTER MODELS) - 16.png":[789,54,2210,2194],"FAT NAP SPRITES (CHARACTER MODELS) - 41.png":[996,463,2017,2191],"FAT NAP SPRITES (CHARACTER MODELS) - 5.png":[1180,51,1826,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 26.png":[1074,54,1924,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 13.png":[639,51,2403,2196],"FAT NAP SPRITES (CHARACTER MODELS) - 40.png":[982,373,2024,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 28.png":[966,76,2194,2194],"FAT NAP SPRITES (CHARACTER MODELS) - 22.png":[741,220,2265,2193],"FAT NAP SPRITES (CHARACTER MODELS) - 35.png":[937,943,2071,2194],"FAT NAP SPRITES (CHARACTER MODELS) - 21.png":[974,53,2022,2192],"FAT NAP SPRITES (CHARACTER MODELS) - 31.png":[1124,54,1877,2198],"FAT NAP SPRITES (CHARACTER MODELS) - 36.png":[949,382,2050,1971],"FAT NAP SPRITES (CHARACTER MODELS) - 42.png":[1118,69,1879,2204],"FAT NAP SPRITES (CHARACTER MODELS) - 4.png":[734,51,2263,2196],"FAT NAP SPRITES (CHARACTER MODELS) - 7.png":[1170,51,1831,2198],"FAT NAP SPRITES (CHARACTER MODELS) - 15.png":[491,53,2504,2194],"FAT NAP SPRITES (CHARACTER MODELS).png":[1097,23,1909,2196],"FAT NAP SPRITES (CHARACTER MODELS) - 24.png":[967,61,2034,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 14.png":[793,53,2209,2195]}};
+const INITIAL={"version":"0.4.230","base":{"idle":{"dx":0,"dy":0.75,"scale":1},"walk":{"dx":2.5,"dy":-4.5,"scale":1},"run":{"dx":2.35,"dy":-5.5,"scale":1},"jump":{"dx":3,"dy":-4,"scale":1},"crouch":{"dx":0,"dy":0,"scale":1},"crawl":{"dx":0,"dy":0,"scale":1},"head":{"dx":0,"dy":0,"scale":1},"fart":{"dx":0,"dy":-2.75,"scale":1},"light":{"dx":4,"dy":2,"scale":1},"baldBang":{"dx":2.75,"dy":-4.25,"scale":1},"powered":{"dx":0,"dy":0,"scale":1},"transform":{"dx":0,"dy":0,"scale":1},"ko":{"dx":0,"dy":0,"scale":1}},"frames":{"idle|FAT NAP SPRITES (CHARACTER MODELS).png":{"dx":0,"dy":-0.5,"w":0.9,"h":0.5,"r":-2},"walk|FAT NAP SPRITES (CHARACTER MODELS) - 4.png":{"dx":0.75,"dy":0,"w":0.85,"h":0.5,"r":-5},"walk|FAT NAP SPRITES (CHARACTER MODELS) - 5.png":{"dx":0.5,"dy":-0.25,"w":0.85,"h":0.5,"r":-7},"walk|FAT NAP SPRITES (CHARACTER MODELS) - 6.png":{"dx":0.25,"dy":-0.25,"w":0.85,"h":0.5,"r":-6},"walk|FAT NAP SPRITES (CHARACTER MODELS) - 7.png":{"dx":-0.25,"dy":-0.25,"w":0.85,"h":0.5,"r":-6},"run|FAT NAP SPRITES (CHARACTER MODELS) - 13.png":{"dx":0,"dy":0,"w":0.9,"h":0.5,"r":-5},"run|FAT NAP SPRITES (CHARACTER MODELS) - 14.png":{"dx":0.25,"dy":-0.25,"w":0.9,"h":0.5,"r":-5},"run|FAT NAP SPRITES (CHARACTER MODELS) - 15.png":{"dx":0.25,"dy":0,"w":0.9,"h":0.5,"r":-5},"run|FAT NAP SPRITES (CHARACTER MODELS) - 16.png":{"dx":0,"dy":-0.25,"w":0.9,"h":0.5,"r":-6},"head|FAT NAP SPRITES (CHARACTER MODELS) - 21.png":{"dx":2.75,"dy":-4,"w":0.7,"h":0.5,"r":-7},"head|FAT NAP SPRITES (CHARACTER MODELS) - 22.png":{"dx":1.5,"dy":0,"w":0.7,"h":0.5,"r":-4},"head|FAT NAP SPRITES (CHARACTER MODELS) - 23.png":{"dx":37.07,"dy":3.78,"w":0.5,"h":0.5,"r":29},"head|FAT NAP SPRITES (CHARACTER MODELS) - 24.png":{"dx":2.06,"dy":-3.96,"w":0.7,"h":0.5,"r":-4},"fart|FAT NAP SPRITES (CHARACTER MODELS) - 26.png":{"dx":-1.25,"dy":3,"w":0.8,"h":0.5,"r":12},"fart|FAT NAP SPRITES (CHARACTER MODELS) - 27.png":{"dx":2,"dy":2.25,"w":0.85,"h":0.5,"r":-4},"fart|FAT NAP SPRITES (CHARACTER MODELS) - 28.png":{"dx":1,"dy":4.5,"w":1.3,"h":0.5,"r":-26},"fart|FAT NAP SPRITES (CHARACTER MODELS) - 29.png":{"dx":2.67,"dy":4.02,"w":1.35,"h":0.5,"r":-40},"ko|FAT NAP SPRITES (CHARACTER MODELS).png":{"dx":0,"dy":0.25,"w":0.9,"h":0.5,"r":-3},"crouch|FAT NAP SPRITES (CHARACTER MODELS) - 31.png":{"dx":2.5,"dy":-4,"w":0.8,"h":0.5,"r":-3},"crouch|FAT NAP SPRITES (CHARACTER MODELS) - 32.png":{"dx":1.25,"dy":0.25,"w":0.8,"h":0.5,"r":-3},"crouch|FAT NAP SPRITES (CHARACTER MODELS) - 33.png":{"dx":4.25,"dy":-0.5,"w":0.85,"h":0.5,"r":-5},"jump|FAT NAP SPRITES (CHARACTER MODELS) - 35.png":{"dx":1.58,"dy":6.78,"w":0.85,"h":0.5,"r":-7},"jump|FAT NAP SPRITES (CHARACTER MODELS) - 36.png":{"dx":0,"dy":0,"w":0.8,"h":0.5,"r":-8},"jump|FAT NAP SPRITES (CHARACTER MODELS) - 37.png":{"dx":40.36,"dy":-4.63,"w":0.85,"h":0.5,"r":-6},"light|FAT NAP SPRITES (CHARACTER MODELS) - 40.png":{"dx":0.25,"dy":2,"w":0.75,"h":0.5,"r":0},"light|FAT NAP SPRITES (CHARACTER MODELS) - 41.png":{"dx":-4,"dy":2.5,"w":0.7,"h":0.5,"r":11},"light|FAT NAP SPRITES (CHARACTER MODELS) - 42.png":{"dx":2.5,"dy":-1,"w":0.85,"h":0.5,"r":-14},"crawl|crawl:0":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0},"crawl|crawl:1":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0},"crawl|crawl:2":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0},"crawl|crawl:3":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0},"baldBang|baldBang:0":{"dx":0,"dy":-1,"w":0.85,"h":0.5,"r":0},"baldBang|baldBang:1":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0},"baldBang|baldBang:2":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0},"baldBang|baldBang:3":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0},"transform|transform:0":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0},"transform|transform:1":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0},"transform|transform:2":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0},"transform|transform:3":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0},"transform|transform:4":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0},"transform|transform:5":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0},"powered|powerIdle:0":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0},"powered|powerWalk:0":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0},"powered|powerWalk:1":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0},"powered|powerWalk:2":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0},"powered|powerWalk:3":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0},"powered|powerRun:0":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0},"powered|powerRun:1":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0},"powered|powerRun:2":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0},"powered|powerRun:3":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0},"powered|powerScream:0":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0}},"bounds":{"FAT NAP SPRITES (CHARACTER MODELS) - 37.png":[761,55,2243,1349],"FAT NAP SPRITES (CHARACTER MODELS) - 32.png":[1060,474,1944,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 23.png":[533,460,2467,2196],"FAT NAP SPRITES (CHARACTER MODELS) - 29.png":[859,293,2138,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 33.png":[1019,946,1989,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 27.png":[1064,54,1931,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 6.png":[731,53,2266,2200],"FAT NAP SPRITES (CHARACTER MODELS) - 16.png":[789,54,2210,2194],"FAT NAP SPRITES (CHARACTER MODELS) - 41.png":[996,463,2017,2191],"FAT NAP SPRITES (CHARACTER MODELS) - 5.png":[1180,51,1826,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 26.png":[1074,54,1924,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 13.png":[639,51,2403,2196],"FAT NAP SPRITES (CHARACTER MODELS) - 40.png":[982,373,2024,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 28.png":[966,76,2194,2194],"FAT NAP SPRITES (CHARACTER MODELS) - 22.png":[741,220,2265,2193],"FAT NAP SPRITES (CHARACTER MODELS) - 35.png":[937,943,2071,2194],"FAT NAP SPRITES (CHARACTER MODELS) - 21.png":[974,53,2022,2192],"FAT NAP SPRITES (CHARACTER MODELS) - 31.png":[1124,54,1877,2198],"FAT NAP SPRITES (CHARACTER MODELS) - 36.png":[949,382,2050,1971],"FAT NAP SPRITES (CHARACTER MODELS) - 42.png":[1118,69,1879,2204],"FAT NAP SPRITES (CHARACTER MODELS) - 4.png":[734,51,2263,2196],"FAT NAP SPRITES (CHARACTER MODELS) - 7.png":[1170,51,1831,2198],"FAT NAP SPRITES (CHARACTER MODELS) - 15.png":[491,53,2504,2194],"FAT NAP SPRITES (CHARACTER MODELS).png":[1097,23,1909,2196],"FAT NAP SPRITES (CHARACTER MODELS) - 24.png":[967,61,2034,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 14.png":[793,53,2209,2195]}};
 function detectFatNapMouthAnchor(im,bounds=null,sourceRect=null,kind='idle'){
  if(!im)return null;
  let perImage=fatNapMouthDetectCache.get(im);
