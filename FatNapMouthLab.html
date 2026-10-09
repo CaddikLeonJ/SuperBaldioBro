@@ -254,25 +254,46 @@ const POSES=[
 {id:"light",name:"Lightheaded",ids:[42,40,41],size:1},
 {id:"head",name:"Headbutt",ids:[21,22,23,24],size:80/96},
 {id:"fart",name:"Fart attack",ids:[26,27,28,29],size:1},
-{id:"ko",name:"KO / Death (idle sprite)",ids:[0],size:1}
+{id:"ko",name:"KO / Death (idle sprite)",ids:[0],size:1},
+{id:"crawl",name:"Crawling",ids:[0,1,2,3],size:1},
+{id:"baldBang",name:"Bald Bang",ids:[0,1,2,3],size:1}
 ];
 const el=id=>document.getElementById(id);
 const c=el("canvas"),x=c.getContext("2d"),cl=(v,a,b)=>Math.min(b,Math.max(a,v)),fatNapMouthDetectCache=new WeakMap();
-const st={kind:"crouch",i:0,dir:1,zoom:7,face:true,selected:true,controlMode:"move",activePad:null,talking:false,talkStart:0,talkRaf:0,talkLevel:.7,markersVisible:true,panEnabled:true,panX:0,panY:0,panPointer:null,viewFocus:null,spriteError:"",zoomInitialized:false,ready:false,img:null,anchor:null,W:0,H:0,ox:0,oy:0,original:{},changes:{},base:{},bounds:{},version:"",drag:false};
-const pose=()=>POSES.find(z=>z.id===st.kind),filename=()=>file(pose().ids[st.i]),key=()=>st.kind+"|"+filename(),orig=()=>({dx:0,dy:0,w:.85,h:.5,r:0,...(st.original[key()]||{})}),tune=()=>({...orig(),...(st.changes[key()]||{})}),base=()=>st.base[st.kind]||{dx:0,dy:0};
+const st={kind:"crouch",i:0,dir:1,zoom:7,face:true,selected:true,controlMode:"move",activePad:null,talking:false,talkStart:0,talkRaf:0,talkLevel:.7,markersVisible:true,panEnabled:true,panX:0,panY:0,panPointer:null,viewFocus:null,spriteError:"",zoomInitialized:false,ready:false,img:null,sheetFrame:null,anchor:null,W:0,H:0,ox:0,oy:0,original:{},changes:{},base:{},bounds:{},version:"",drag:false};
+const pose=()=>POSES.find(z=>z.id===st.kind),filename=()=>st.kind==="crawl"||st.kind==="baldBang"?st.kind+":"+pose().ids[st.i]:file(pose().ids[st.i]),key=()=>st.kind+"|"+filename(),orig=()=>({dx:0,dy:0,w:.85,h:.5,r:0,...(st.original[key()]||{})}),tune=()=>({...orig(),...(st.changes[key()]||{})}),base=()=>st.base[st.kind]||{dx:0,dy:0};
 const num=v=>Math.round(v*100)/100;
-function params(){if(!st.ready)return null;const im=st.img,b=st.bounds[filename()],s=96*pose().size/im.naturalHeight;
- return{s:s,x:-im.naturalWidth*s/2,y:-(b?b[3]:im.naturalHeight)*s,w:im.naturalWidth*s,h:im.naturalHeight*s}}
+function params(){
+ if(!st.ready||!st.img)return null;
+ const im=st.img,iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height,b=st.bounds[filename()];
+ if(st.kind==="baldBang"&&st.sheetFrame){
+  // Match the game: place each cleaned sheet frame by its BODY, not by
+  // its image box, keeping the head stable through the beanie animation.
+  const frame=st.sheetFrame,scale=96*pose().size/Math.max(1,frame.bodyH);
+  return{s:scale,x:-frame.bodyCx*scale,y:-frame.bodyBottom*scale,w:iw*scale,h:ih*scale}
+ }
+ if(st.kind==="crawl"){
+  // Same crop dimensions and scale as the actual crawling animation.
+  const crouchBounds=st.bounds[file(33)]||[1019,946,1989,2197];
+  const crouchBaseH=(crouchBounds[3]-crouchBounds[1])*(96/2200);
+  const scale=crouchBaseH/633;
+  return{s:scale,x:-iw*scale/2,y:-ih*scale,w:iw*scale,h:ih*scale}
+ }
+ const scale=96*pose().size/ih;
+ return{s:scale,x:-iw*scale/2,y:-(b?b[3]:ih)*scale,w:iw*scale,h:ih*scale}
+}
 function autoMouth(){const a=params();return a&&st.anchor?{x:a.x+st.anchor.x*a.s,y:a.y+st.anchor.y*a.s}:null}
 function mouth(){const a=autoMouth();return a?{x:a.x+base().dx+tune().dx,y:a.y+base().dy+tune().dy}:null}
 function fallbackFaceAnchor(im){
- const b=st.bounds[filename()]||[0,0,im.naturalWidth,im.naturalHeight];
+ const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+ const b=st.bounds[filename()]||[0,0,iw,ih];
  return {x:b[0]+(b[2]-b[0])*(st.kind==="run"?.56:.50),y:b[1]+(b[3]-b[1])*(st.kind==="run"?.24:.285)}
 }
 function centeredZoom(im){
  // A short iPhone canvas must never magnify the head beyond its visible space.
- const b=st.bounds[filename()]||[0,0,im.naturalWidth,im.naturalHeight];
- const faceWorldHeight=Math.max(12,(b[3]-b[1])*96*pose().size/im.naturalHeight*.26);
+ const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+ const b=st.bounds[filename()]||[0,0,iw,ih];
+ const p=params(),faceWorldHeight=Math.max(12,(p?p.h:(b[3]-b[1])*96*pose().size/ih)*.26);
  const H=c.getBoundingClientRect().height||st.H||200;
  return Math.min(7,Math.max(2,Math.floor(Math.max(80,H-28)/faceWorldHeight*10)/10))
 }
@@ -291,8 +312,10 @@ function setPreviewZoom(value,persist=true){
 }
 function frameFullZoom(){
  const p=params();if(!p)return 2;
- const b=st.bounds[filename()]||[0,0,st.img.naturalWidth,st.img.naturalHeight];
- const bodyW=Math.max(8,(b[2]-b[0])*p.s),bodyH=Math.max(8,(b[3]-b[1])*p.s);
+ const iw=st.img.naturalWidth||st.img.width,ih=st.img.naturalHeight||st.img.height;
+ const b=st.bounds[filename()]||[0,0,iw,ih];
+ const bodyW=Math.max(8,(st.kind==="crawl"||st.kind==="baldBang"?iw:b[2]-b[0])*p.s);
+ const bodyH=Math.max(8,(st.kind==="crawl"||st.kind==="baldBang"?ih:b[3]-b[1])*p.s);
  return Math.max(1,Math.min(7,Math.min((st.W-26)/bodyW,(st.H-24)/bodyH)))
 }
 function sizeCanvas(){const rect=c.getBoundingClientRect(),d=Math.min(3,devicePixelRatio||1);st.W=rect.width;st.H=rect.height;c.width=Math.round(st.W*d);c.height=Math.round(st.H*d);x.setTransform(d,0,0,d,0,0)}
@@ -453,34 +476,222 @@ function stats(){
 }
 function buttonFrames(){
  el("pose").value=st.kind;const target=el("frameButtons");target.replaceChildren();
- pose().ids.forEach((n,i)=>{const b=document.createElement("button");b.className=i===st.i?"sel":"";b.innerHTML="Frame "+(i+1)+"<small>"+n+".png</small>";b.onclick=()=>{st.i=i;buttonFrames();loadSprite()};target.append(b)});stats()
+ pose().ids.forEach((n,i)=>{const b=document.createElement("button");b.className=i===st.i?"sel":"";b.innerHTML="Frame "+(i+1)+"<small>"+(st.kind==="crawl"||st.kind==="baldBang"?"sheet "+(i+1):n+".png")+"</small>";b.onclick=()=>{st.i=i;buttonFrames();loadSprite()};target.append(b)});stats()
 }
+
+// Sprite sheets used by the game. These are extracted from the exact ZIP
+// assets used during gameplay, not stand-in poses or individual character PNGs.
+const EDITOR_CRAWL_RECTS=[[590,277,896,633],[1563,332,863,564],[496,1166,895,633],[1480,1215,1031,553]];
+const editorSheetCache={};
+const baldBangSheet=new Image();
+let baldBangOK=false,baldBangFrames=[],baldBangReferenceBodyH=1;
+
+async function unzipPNGEntries(zip){
+ const dv=new DataView(zip),dec=new TextDecoder();let eocd=-1;
+ for(let i=zip.byteLength-22;i>=Math.max(0,zip.byteLength-65557);i--)if(dv.getUint32(i,true)===0x06054b50){eocd=i;break}
+ if(eocd<0)throw new Error('powered zip directory missing');
+ const count=dv.getUint16(eocd+10,true),cd=dv.getUint32(eocd+16,true);let p=cd,out=[];
+ for(let n=0;n<count;n++){
+  if(dv.getUint32(p,true)!==0x02014b50)break;
+  const method=dv.getUint16(p+10,true),cs=dv.getUint32(p+20,true),fn=dv.getUint16(p+28,true),ex=dv.getUint16(p+30,true),cm=dv.getUint16(p+32,true),off=dv.getUint32(p+42,true),name=dec.decode(new Uint8Array(zip,p+46,fn));
+  if(/\.png$/i.test(name)&&!name.includes('__MACOSX/')&&!name.split('/').pop().startsWith('._')){
+   const lf=dv.getUint16(off+26,true),le=dv.getUint16(off+28,true),start=off+30+lf+le,packed=new Blob([new Uint8Array(zip,start,cs)]);
+   let blob;
+   if(method===0)blob=packed;
+   else if(method===8)blob=await new Response(packed.stream().pipeThrough(new DecompressionStream('deflate-raw'))).blob();
+   else throw new Error('unsupported powered zip compression');
+   out.push({name,blob})
+  }
+  p+=46+fn+ex+cm
+ }
+ out.sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true,sensitivity:'base'}));
+ return out
+}
+
+function prepareBaldBangFrames(){
+ try{
+  const count=4,W=baldBangSheet.naturalWidth,H=baldBangSheet.naturalHeight,cellW=Math.floor(W/count),out=[];
+  for(let i=0;i<count;i++){
+   const sx=i*cellW,sw=i===count-1?W-sx:cellW,cv=document.createElement('canvas');cv.width=sw;cv.height=H;
+   const g=cv.getContext('2d',{willReadFrequently:true});g.drawImage(baldBangSheet,sx,0,sw,H,0,0,sw,H);
+   const im=g.getImageData(0,0,sw,H),d=im.data;
+   for(let p=0;p<sw*H;p++){
+    const j=p*4,r=d[j],gg=d[j+1],b=d[j+2],a=d[j+3];
+    const green=a>12&&gg>105&&gg>r*1.22&&gg>b*1.16&&(gg-Math.max(r,b)>22);
+    if(green)d[j+3]=0
+   }
+   g.putImageData(im,0,0);
+
+   const maxProbe=460,s=Math.min(1,maxProbe/Math.max(sw,H)),pw=Math.max(1,Math.round(sw*s)),ph=Math.max(1,Math.round(H*s));
+   const probe=document.createElement('canvas');probe.width=pw;probe.height=ph;
+   const pg=probe.getContext('2d',{willReadFrequently:true});pg.drawImage(cv,0,0,pw,ph);
+   const pd=pg.getImageData(0,0,pw,ph).data,mask=new Uint8Array(pw*ph);
+   for(let p=0;p<mask.length;p++)mask[p]=pd[p*4+3]>20?1:0;
+
+   const dil=new Uint8Array(mask.length),rad=1;
+   for(let y=0;y<ph;y++)for(let x0=0;x0<pw;x0++)if(mask[y*pw+x0])
+    for(let yy=Math.max(0,y-rad);yy<=Math.min(ph-1,y+rad);yy++)
+     for(let xx=Math.max(0,x0-rad);xx<=Math.min(pw-1,x0+rad);xx++)dil[yy*pw+xx]=1;
+
+   const seen=new Uint8Array(dil.length),owner=new Int16Array(dil.length),parts=[];owner.fill(-1);let cid=0;
+   for(let y=0;y<ph;y++)for(let x0=0;x0<pw;x0++){
+    const k=y*pw+x0;if(!dil[k]||seen[k])continue;
+    const id=cid++,q=[k];seen[k]=1;let qi=0,n=0,minX=x0,maxX=x0,minY=y,maxY=y;
+    while(qi<q.length){
+     const z=q[qi++],zx=z%pw,zy=(z/pw)|0;owner[z]=id;n++;
+     if(zx<minX)minX=zx;if(zx>maxX)maxX=zx;if(zy<minY)minY=zy;if(zy>maxY)maxY=zy;
+     for(let yy=Math.max(0,zy-1);yy<=Math.min(ph-1,zy+1);yy++)for(let xx=Math.max(0,zx-1);xx<=Math.min(pw-1,zx+1);xx++){
+      const nk=yy*pw+xx;if(dil[nk]&&!seen[nk]){seen[nk]=1;q.push(nk)}
+     }
+    }
+    const w=maxX-minX+1,h=maxY-minY+1;
+    if(n>10&&w>3&&h>3)parts.push({id,n,minX,maxX,minY,maxY,w,h,cx:(minX+maxX)/2,cy:(minY+maxY)/2})
+   }
+   if(!parts.length)throw new Error('Bald Bang frame '+(i+1)+' has no character artwork');
+
+   const centreX=pw/2,primary=parts.slice().sort((a,b)=>{
+    const sa=a.n*(1+a.h/Math.max(1,ph))*(1-Math.min(.35,Math.abs(a.cx-centreX)/pw*.35));
+    const sb=b.n*(1+b.h/Math.max(1,ph))*(1-Math.min(.35,Math.abs(b.cx-centreX)/pw*.35));
+    return sb-sa
+   })[0];
+
+   const keep=new Set([primary.id]),padX=primary.w*.68,padTop=primary.h*.42,padBottom=primary.h*.10;
+   for(const p of parts){
+    if(p.id===primary.id)continue;
+    const nearX=p.maxX>=primary.minX-padX&&p.minX<=primary.maxX+padX;
+    const nearY=p.maxY>=primary.minY-padTop&&p.minY<=primary.maxY+padBottom;
+    const substantial=p.n>=Math.max(5,primary.n*.0015);
+    const notBelow=p.cy<=primary.maxY+primary.h*.06;
+    if(nearX&&nearY&&substantial&&notBelow)keep.add(p.id)
+   }
+
+   const cleaned=g.getImageData(0,0,sw,H),cd=cleaned.data;
+   let minX=sw,minY=H,maxX=-1,maxY=-1;
+   for(let y=0;y<H;y++)for(let x0=0;x0<sw;x0++){
+    const j=(y*sw+x0)*4;if(cd[j+3]<=20)continue;
+    const px=Math.max(0,Math.min(pw-1,Math.floor(x0*s))),py=Math.max(0,Math.min(ph-1,Math.floor(y*s))),id=owner[py*pw+px];
+    if(!keep.has(id)){cd[j+3]=0;continue}
+    if(x0<minX)minX=x0;if(x0>maxX)maxX=x0;if(y<minY)minY=y;if(y>maxY)maxY=y
+   }
+   g.putImageData(cleaned,0,0);
+   if(maxX<minX||maxY<minY)throw new Error('Bald Bang frame '+(i+1)+' cleaned empty');
+
+   const bodyX0=Math.max(0,Math.floor(primary.minX/s)),bodyY0=Math.max(0,Math.floor(primary.minY/s)),
+         bodyX1=Math.min(sw,Math.ceil((primary.maxX+1)/s)),bodyY1=Math.min(H,Math.ceil((primary.maxY+1)/s));
+   const pad=Math.max(2,Math.round(Math.max(sw,H)*.006)),x0=Math.max(0,minX-pad),y0=Math.max(0,minY-pad),x1=Math.min(sw,maxX+pad+1),y1=Math.min(H,maxY+pad+1);
+   const crop=document.createElement('canvas');crop.width=Math.max(1,x1-x0);crop.height=Math.max(1,y1-y0);
+   crop.getContext('2d').drawImage(cv,x0,y0,crop.width,crop.height,0,0,crop.width,crop.height);
+
+   out.push({
+    img:crop,
+    bodyH:Math.max(1,bodyY1-bodyY0),
+    bodyCx:(bodyX0+bodyX1)/2-x0,
+    bodyTop:bodyY0-y0,
+    bodyBottom:bodyY1-y0
+   })
+  }
+  if(out.length===4){
+   const hs=out.map(f=>f.bodyH).sort((a,b)=>a-b);
+   baldBangReferenceBodyH=Math.max(1,(hs[1]+hs[2])*.5);
+   baldBangFrames=out;baldBangOK=true
+  }else{baldBangFrames=[];baldBangOK=false}
+ }catch(e){console.warn('Bald Bang frame prep fallback',e);baldBangFrames=[];baldBangReferenceBodyH=1;baldBangOK=false}
+}
+
+async function editorSheetImage(blob){
+ const u=URL.createObjectURL(new Blob([blob],{type:"image/png"}));
+ try{
+  return await new Promise((resolve,reject)=>{
+   const image=new Image();
+   image.onload=()=>resolve(image);
+   image.onerror=()=>reject(Error("Sprite sheet PNG decode failed"));
+   image.src=u
+  })
+ }finally{URL.revokeObjectURL(u)}
+}
+async function editorReadZip(path){
+ const response=await fetch(RAW+encodeURIComponent(path),{cache:"force-cache"});
+ if(!response.ok)throw Error(path+" — HTTP "+response.status);
+ const list=await unzipPNGEntries(await response.arrayBuffer());
+ if(!list.length)throw Error("No PNG sprites in "+path);
+ return list
+}
+async function editorBuildSheet(kind){
+ if(kind==="crawl"){
+  const entries=await editorReadZip("Ayofatnap Crawling Animation.zip");
+  const candidate=entries.slice().sort((a,b)=>b.blob.size-a.blob.size)[0];
+  const sheet=await editorSheetImage(candidate.blob);
+  const rects=EDITOR_CRAWL_RECTS;
+  if(rects.some(([sx,sy,w,h])=>sx+w>sheet.naturalWidth||sy+h>sheet.naturalHeight))
+   throw Error("Crawling sheet has unexpected dimensions");
+  return rects.map(([sx,sy,w,h])=>{
+   const cv=document.createElement("canvas");cv.width=w;cv.height=h;
+   cv.getContext("2d").drawImage(sheet,sx,sy,w,h,0,0,w,h);
+   return {img:cv}
+  })
+ }
+ if(kind==="baldBang"){
+  const entries=await editorReadZip("AyofatnapBaldBang.zip");
+  const candidate=entries.find(e=>e.name.split("/").pop().toLowerCase()==="ayofatnapbaldbang.png")||entries[0];
+  const sheet=await editorSheetImage(candidate.blob);
+  baldBangSheet.src=sheet.src;
+  await new Promise((resolve,reject)=>{
+   if(baldBangSheet.complete&&baldBangSheet.naturalWidth){resolve();return}
+   baldBangSheet.onload=resolve;
+   baldBangSheet.onerror=()=>reject(Error("Bald Bang sheet decode failed"))
+  });
+  prepareBaldBangFrames();
+  if(!baldBangOK||baldBangFrames.length!==4)throw Error("Unable to isolate all 4 Bald Bang character frames");
+  return baldBangFrames
+ }
+ throw Error("Unknown sprite sheet: "+kind)
+}
+function editorGetSheet(kind){
+ if(!editorSheetCache[kind]){
+  editorSheetCache[kind]=editorBuildSheet(kind).catch(e=>{delete editorSheetCache[kind];throw e})
+ }
+ return editorSheetCache[kind]
+}
+function finishSpriteLoad(im,selected,frame=null){
+ if(selected!==key())return;
+ st.img=im;st.sheetFrame=frame;
+ const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+ const bounds=st.bounds[filename()]||[0,0,iw,ih];
+ const found=detectFatNapMouthAnchor(im,bounds,null,st.kind);
+ const valid=found&&Number.isFinite(found.x)&&Number.isFinite(found.y)&&
+   found.x>=bounds[0]&&found.x<=bounds[2]&&found.y>=bounds[1]&&found.y<=bounds[3];
+ st.anchor=valid?found:fallbackFaceAnchor(im);
+ st.ready=true;st.spriteError="";
+ sizeCanvas();
+ if(!st.zoomInitialized)setPreviewZoom(centeredZoom(im),false);
+ else el("zoom").value=st.zoom;
+ st.viewFocus=mouth()||autoMouth();
+ if(!valid)el("status").textContent="Face estimated for this frame — sprite is still editable.";
+ draw()
+}
+
 function loadSprite(){
  if(st.talking)st.talkStart=performance.now();
- resetCameraForFrame();st.ready=false;st.anchor=null;st.img=null;st.spriteError="";draw();
- const im=new Image(),selected=key(),assetName=encodeURIComponent(filename());
+ resetCameraForFrame();st.ready=false;st.anchor=null;st.img=null;st.sheetFrame=null;st.spriteError="";draw();
+ const selected=key();
+ if(st.kind==="crawl"||st.kind==="baldBang"){
+  const kind=st.kind,idx=st.i;
+  editorGetSheet(kind).then(frames=>{
+   if(selected!==key())return;
+   const frame=frames[idx];
+   if(!frame?.img)throw Error("Missing "+kind+" frame "+(idx+1));
+   finishSpriteLoad(frame.img,selected,kind==="baldBang"?frame:null)
+  }).catch(e=>{
+   if(selected!==key())return;
+   st.spriteError="Could not load "+(kind==="crawl"?"Crawling":"Bald Bang")+" sprite sheet";
+   el("status").textContent=st.spriteError+": "+e.message;draw()
+  });
+  return
+ }
+ const im=new Image(),assetName=encodeURIComponent(filename());
  const sources=[ASSETS+assetName,RAW+assetName];let sourceIndex=0;
  im.crossOrigin="anonymous";
- im.onload=()=>{
-  if(selected!==key())return;
-  st.img=im;
-  const bounds=st.bounds[filename()]||[0,0,im.naturalWidth,im.naturalHeight];
-  const found=detectFatNapMouthAnchor(im,bounds,null,st.kind);
-  const valid=found&&Number.isFinite(found.x)&&Number.isFinite(found.y)&&
-    found.x>=bounds[0]&&found.x<=bounds[2]&&found.y>=bounds[1]&&found.y<=bounds[3];
-  st.anchor=valid?found:fallbackFaceAnchor(im);
-  // A failed colour-based mouth detection must NEVER prevent the PNG from drawing.
-  st.ready=true;st.spriteError="";
-  sizeCanvas();
-  // Auto-fit once on the first sprite. Then retain the user's zoom on EVERY switch.
-  if(!st.zoomInitialized)setPreviewZoom(centeredZoom(im),false);
-  else el("zoom").value=st.zoom;
-  // Centre once at frame selection using its calibrated mouth position, while
-  // keeping the camera stationary during subsequent drags, nudges and typing.
-  st.viewFocus=mouth()||autoMouth();
-  if(!valid)el("status").textContent="Face estimated for this frame — sprite is still editable.";
-  draw()
- };
+ im.onload=()=>finishSpriteLoad(im,selected);
  im.onerror=()=>{
   if(selected!==key())return;
   if(++sourceIndex<sources.length){im.src=sources[sourceIndex];return}
@@ -622,7 +833,7 @@ el("copyFrame").onclick=()=>copy(exportChanges(false));el("copyAll").onclick=()=
 for(const p of POSES){const o=document.createElement("option");o.value=p.id;o.textContent=p.name+" ("+p.ids.length+" frames)";el("pose").append(o)}
 try{const prev=JSON.parse(localStorage.getItem("fatnap-mouthlab-edits")||"{}");if(prev&&typeof prev==="object")st.changes=prev}catch{}
 window.onresize=()=>{sizeCanvas();draw()};
-const INITIAL={"version":"0.4.227","base":{"idle":{"dx":0,"dy":0.75,"scale":1},"walk":{"dx":2.5,"dy":-4.5,"scale":1},"run":{"dx":2.35,"dy":-5.5,"scale":1},"jump":{"dx":3,"dy":-4,"scale":1},"crouch":{"dx":0,"dy":0,"scale":1},"crawl":{"dx":0,"dy":0,"scale":1},"head":{"dx":0,"dy":0,"scale":1},"fart":{"dx":0,"dy":-2.75,"scale":1},"light":{"dx":4,"dy":2,"scale":1},"baldBang":{"dx":2.75,"dy":-4.25,"scale":1},"powered":{"dx":0,"dy":0,"scale":1},"ko":{"dx":0,"dy":0,"scale":1}},"frames":{"idle|FAT NAP SPRITES (CHARACTER MODELS).png":{"dx":0,"dy":-0.5,"w":0.9,"h":0.5,"r":-2},"walk|FAT NAP SPRITES (CHARACTER MODELS) - 4.png":{"dx":0.75,"dy":0,"w":0.85,"h":0.5,"r":-5},"walk|FAT NAP SPRITES (CHARACTER MODELS) - 5.png":{"dx":0.5,"dy":-0.25,"w":0.85,"h":0.5,"r":-7},"walk|FAT NAP SPRITES (CHARACTER MODELS) - 6.png":{"dx":0.25,"dy":-0.25,"w":0.85,"h":0.5,"r":-6},"walk|FAT NAP SPRITES (CHARACTER MODELS) - 7.png":{"dx":-0.25,"dy":-0.25,"w":0.85,"h":0.5,"r":-6},"run|FAT NAP SPRITES (CHARACTER MODELS) - 13.png":{"dx":0,"dy":0,"w":0.9,"h":0.5,"r":-5},"run|FAT NAP SPRITES (CHARACTER MODELS) - 14.png":{"dx":0.25,"dy":-0.25,"w":0.9,"h":0.5,"r":-5},"run|FAT NAP SPRITES (CHARACTER MODELS) - 15.png":{"dx":0.25,"dy":0,"w":0.9,"h":0.5,"r":-5},"run|FAT NAP SPRITES (CHARACTER MODELS) - 16.png":{"dx":0,"dy":-0.25,"w":0.9,"h":0.5,"r":-6},"head|FAT NAP SPRITES (CHARACTER MODELS) - 21.png":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0},"head|FAT NAP SPRITES (CHARACTER MODELS) - 22.png":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0},"head|FAT NAP SPRITES (CHARACTER MODELS) - 23.png":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0},"head|FAT NAP SPRITES (CHARACTER MODELS) - 24.png":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0},"fart|FAT NAP SPRITES (CHARACTER MODELS) - 26.png":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0},"fart|FAT NAP SPRITES (CHARACTER MODELS) - 27.png":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0},"fart|FAT NAP SPRITES (CHARACTER MODELS) - 28.png":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0},"fart|FAT NAP SPRITES (CHARACTER MODELS) - 29.png":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0},"crouch|FAT NAP SPRITES (CHARACTER MODELS) - 31.png":{"dx":2.5,"dy":-4,"w":0.8,"h":0.5,"r":-3},"crouch|FAT NAP SPRITES (CHARACTER MODELS) - 32.png":{"dx":1.25,"dy":0.25,"w":0.8,"h":0.5,"r":-3},"crouch|FAT NAP SPRITES (CHARACTER MODELS) - 33.png":{"dx":4.25,"dy":-0.5,"w":0.85,"h":0.5,"r":-5},"jump|FAT NAP SPRITES (CHARACTER MODELS) - 35.png":{"dx":1.58,"dy":6.78,"w":0.85,"h":0.5,"r":-7},"jump|FAT NAP SPRITES (CHARACTER MODELS) - 36.png":{"dx":0,"dy":0,"w":0.8,"h":0.5,"r":-8},"jump|FAT NAP SPRITES (CHARACTER MODELS) - 37.png":{"dx":40.36,"dy":-4.63,"w":0.85,"h":0.5,"r":-6},"light|FAT NAP SPRITES (CHARACTER MODELS) - 40.png":{"dx":0.25,"dy":2,"w":0.75,"h":0.5,"r":0},"light|FAT NAP SPRITES (CHARACTER MODELS) - 41.png":{"dx":-4,"dy":2.5,"w":0.7,"h":0.5,"r":11},"light|FAT NAP SPRITES (CHARACTER MODELS) - 42.png":{"dx":2.5,"dy":-1,"w":0.85,"h":0.5,"r":-14},"crawl|crawl:0":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0},"crawl|crawl:1":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0},"crawl|crawl:2":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0},"crawl|crawl:3":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0},"baldBang|baldBang:0":{"dx":0,"dy":-1,"w":0.85,"h":0.5,"r":0},"baldBang|baldBang:1":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0},"baldBang|baldBang:2":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0},"baldBang|baldBang:3":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0}},"bounds":{"FAT NAP SPRITES (CHARACTER MODELS) - 37.png":[761,55,2243,1349],"FAT NAP SPRITES (CHARACTER MODELS) - 32.png":[1060,474,1944,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 23.png":[533,460,2467,2196],"FAT NAP SPRITES (CHARACTER MODELS) - 29.png":[859,293,2138,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 33.png":[1019,946,1989,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 27.png":[1064,54,1931,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 6.png":[731,53,2266,2200],"FAT NAP SPRITES (CHARACTER MODELS) - 16.png":[789,54,2210,2194],"FAT NAP SPRITES (CHARACTER MODELS) - 41.png":[996,463,2017,2191],"FAT NAP SPRITES (CHARACTER MODELS) - 5.png":[1180,51,1826,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 26.png":[1074,54,1924,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 13.png":[639,51,2403,2196],"FAT NAP SPRITES (CHARACTER MODELS) - 40.png":[982,373,2024,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 28.png":[966,76,2194,2194],"FAT NAP SPRITES (CHARACTER MODELS) - 22.png":[741,220,2265,2193],"FAT NAP SPRITES (CHARACTER MODELS) - 35.png":[937,943,2071,2194],"FAT NAP SPRITES (CHARACTER MODELS) - 21.png":[974,53,2022,2192],"FAT NAP SPRITES (CHARACTER MODELS) - 31.png":[1124,54,1877,2198],"FAT NAP SPRITES (CHARACTER MODELS) - 36.png":[949,382,2050,1971],"FAT NAP SPRITES (CHARACTER MODELS) - 42.png":[1118,69,1879,2204],"FAT NAP SPRITES (CHARACTER MODELS) - 4.png":[734,51,2263,2196],"FAT NAP SPRITES (CHARACTER MODELS) - 7.png":[1170,51,1831,2198],"FAT NAP SPRITES (CHARACTER MODELS) - 15.png":[491,53,2504,2194],"FAT NAP SPRITES (CHARACTER MODELS).png":[1097,23,1909,2196],"FAT NAP SPRITES (CHARACTER MODELS) - 24.png":[967,61,2034,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 14.png":[793,53,2209,2195]}};
+const INITIAL={"version":"0.4.229","base":{"idle":{"dx":0,"dy":0.75,"scale":1},"walk":{"dx":2.5,"dy":-4.5,"scale":1},"run":{"dx":2.35,"dy":-5.5,"scale":1},"jump":{"dx":3,"dy":-4,"scale":1},"crouch":{"dx":0,"dy":0,"scale":1},"crawl":{"dx":0,"dy":0,"scale":1},"head":{"dx":0,"dy":0,"scale":1},"fart":{"dx":0,"dy":-2.75,"scale":1},"light":{"dx":4,"dy":2,"scale":1},"baldBang":{"dx":2.75,"dy":-4.25,"scale":1},"powered":{"dx":0,"dy":0,"scale":1},"ko":{"dx":0,"dy":0,"scale":1}},"frames":{"idle|FAT NAP SPRITES (CHARACTER MODELS).png":{"dx":0,"dy":-0.5,"w":0.9,"h":0.5,"r":-2},"walk|FAT NAP SPRITES (CHARACTER MODELS) - 4.png":{"dx":0.75,"dy":0,"w":0.85,"h":0.5,"r":-5},"walk|FAT NAP SPRITES (CHARACTER MODELS) - 5.png":{"dx":0.5,"dy":-0.25,"w":0.85,"h":0.5,"r":-7},"walk|FAT NAP SPRITES (CHARACTER MODELS) - 6.png":{"dx":0.25,"dy":-0.25,"w":0.85,"h":0.5,"r":-6},"walk|FAT NAP SPRITES (CHARACTER MODELS) - 7.png":{"dx":-0.25,"dy":-0.25,"w":0.85,"h":0.5,"r":-6},"run|FAT NAP SPRITES (CHARACTER MODELS) - 13.png":{"dx":0,"dy":0,"w":0.9,"h":0.5,"r":-5},"run|FAT NAP SPRITES (CHARACTER MODELS) - 14.png":{"dx":0.25,"dy":-0.25,"w":0.9,"h":0.5,"r":-5},"run|FAT NAP SPRITES (CHARACTER MODELS) - 15.png":{"dx":0.25,"dy":0,"w":0.9,"h":0.5,"r":-5},"run|FAT NAP SPRITES (CHARACTER MODELS) - 16.png":{"dx":0,"dy":-0.25,"w":0.9,"h":0.5,"r":-6},"head|FAT NAP SPRITES (CHARACTER MODELS) - 21.png":{"dx":2.75,"dy":-4,"w":0.7,"h":0.5,"r":-7},"head|FAT NAP SPRITES (CHARACTER MODELS) - 22.png":{"dx":1.5,"dy":0,"w":0.7,"h":0.5,"r":-4},"head|FAT NAP SPRITES (CHARACTER MODELS) - 23.png":{"dx":37.07,"dy":3.78,"w":0.5,"h":0.5,"r":29},"head|FAT NAP SPRITES (CHARACTER MODELS) - 24.png":{"dx":2.06,"dy":-3.96,"w":0.7,"h":0.5,"r":-4},"fart|FAT NAP SPRITES (CHARACTER MODELS) - 26.png":{"dx":-1.25,"dy":3,"w":0.8,"h":0.5,"r":12},"fart|FAT NAP SPRITES (CHARACTER MODELS) - 27.png":{"dx":2,"dy":2.25,"w":0.85,"h":0.5,"r":-4},"fart|FAT NAP SPRITES (CHARACTER MODELS) - 28.png":{"dx":1,"dy":4.5,"w":1.3,"h":0.5,"r":-26},"fart|FAT NAP SPRITES (CHARACTER MODELS) - 29.png":{"dx":2.67,"dy":4.02,"w":1.35,"h":0.5,"r":-40},"ko|FAT NAP SPRITES (CHARACTER MODELS).png":{"dx":0,"dy":0.25,"w":0.9,"h":0.5,"r":-3},"crouch|FAT NAP SPRITES (CHARACTER MODELS) - 31.png":{"dx":2.5,"dy":-4,"w":0.8,"h":0.5,"r":-3},"crouch|FAT NAP SPRITES (CHARACTER MODELS) - 32.png":{"dx":1.25,"dy":0.25,"w":0.8,"h":0.5,"r":-3},"crouch|FAT NAP SPRITES (CHARACTER MODELS) - 33.png":{"dx":4.25,"dy":-0.5,"w":0.85,"h":0.5,"r":-5},"jump|FAT NAP SPRITES (CHARACTER MODELS) - 35.png":{"dx":1.58,"dy":6.78,"w":0.85,"h":0.5,"r":-7},"jump|FAT NAP SPRITES (CHARACTER MODELS) - 36.png":{"dx":0,"dy":0,"w":0.8,"h":0.5,"r":-8},"jump|FAT NAP SPRITES (CHARACTER MODELS) - 37.png":{"dx":40.36,"dy":-4.63,"w":0.85,"h":0.5,"r":-6},"light|FAT NAP SPRITES (CHARACTER MODELS) - 40.png":{"dx":0.25,"dy":2,"w":0.75,"h":0.5,"r":0},"light|FAT NAP SPRITES (CHARACTER MODELS) - 41.png":{"dx":-4,"dy":2.5,"w":0.7,"h":0.5,"r":11},"light|FAT NAP SPRITES (CHARACTER MODELS) - 42.png":{"dx":2.5,"dy":-1,"w":0.85,"h":0.5,"r":-14},"crawl|crawl:0":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0},"crawl|crawl:1":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0},"crawl|crawl:2":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0},"crawl|crawl:3":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0},"baldBang|baldBang:0":{"dx":0,"dy":-1,"w":0.85,"h":0.5,"r":0},"baldBang|baldBang:1":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0},"baldBang|baldBang:2":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0},"baldBang|baldBang:3":{"dx":0,"dy":0,"w":0.85,"h":0.5,"r":0}},"bounds":{"FAT NAP SPRITES (CHARACTER MODELS) - 37.png":[761,55,2243,1349],"FAT NAP SPRITES (CHARACTER MODELS) - 32.png":[1060,474,1944,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 23.png":[533,460,2467,2196],"FAT NAP SPRITES (CHARACTER MODELS) - 29.png":[859,293,2138,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 33.png":[1019,946,1989,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 27.png":[1064,54,1931,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 6.png":[731,53,2266,2200],"FAT NAP SPRITES (CHARACTER MODELS) - 16.png":[789,54,2210,2194],"FAT NAP SPRITES (CHARACTER MODELS) - 41.png":[996,463,2017,2191],"FAT NAP SPRITES (CHARACTER MODELS) - 5.png":[1180,51,1826,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 26.png":[1074,54,1924,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 13.png":[639,51,2403,2196],"FAT NAP SPRITES (CHARACTER MODELS) - 40.png":[982,373,2024,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 28.png":[966,76,2194,2194],"FAT NAP SPRITES (CHARACTER MODELS) - 22.png":[741,220,2265,2193],"FAT NAP SPRITES (CHARACTER MODELS) - 35.png":[937,943,2071,2194],"FAT NAP SPRITES (CHARACTER MODELS) - 21.png":[974,53,2022,2192],"FAT NAP SPRITES (CHARACTER MODELS) - 31.png":[1124,54,1877,2198],"FAT NAP SPRITES (CHARACTER MODELS) - 36.png":[949,382,2050,1971],"FAT NAP SPRITES (CHARACTER MODELS) - 42.png":[1118,69,1879,2204],"FAT NAP SPRITES (CHARACTER MODELS) - 4.png":[734,51,2263,2196],"FAT NAP SPRITES (CHARACTER MODELS) - 7.png":[1170,51,1831,2198],"FAT NAP SPRITES (CHARACTER MODELS) - 15.png":[491,53,2504,2194],"FAT NAP SPRITES (CHARACTER MODELS).png":[1097,23,1909,2196],"FAT NAP SPRITES (CHARACTER MODELS) - 24.png":[967,61,2034,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 14.png":[793,53,2209,2195]}};
 function detectFatNapMouthAnchor(im,bounds=null,sourceRect=null,kind='idle'){
  if(!im)return null;
  let perImage=fatNapMouthDetectCache.get(im);
