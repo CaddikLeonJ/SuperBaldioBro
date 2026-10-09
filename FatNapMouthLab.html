@@ -981,8 +981,15 @@ el("prev").onclick=()=>{if(st.i>0){st.i--;buttonFrames();loadSprite()}};
 el("next").onclick=()=>{if(st.i<pose().ids.length-1){st.i++;buttonFrames();loadSprite()}};
 function refreshPoses(){
  const selector=el("pose");selector.replaceChildren();
- for(const p of POSES.filter(p=>(p.form||"normal")===st.form)){
-  const o=document.createElement("option");o.value=p.id;o.textContent=p.name+" ("+p.ids.length+" frames)";
+ // Powered Idle/Walk/Run/Scream/Transform use their own sprite ZIPs.
+ // All other attacks/movement while powered are game-shared normal poses,
+ // enlarged by Clout Power. Show them too, using the SAME saved mouth keys.
+ const chosen=st.form==="powered"
+  ?POSES.filter(p=>p.form==="powered").concat(POSES.filter(p=>!p.form))
+  :POSES.filter(p=>!p.form);
+ for(const p of chosen){
+  const o=document.createElement("option");o.value=p.id;
+  o.textContent=(st.form==="powered"&&!p.form?"↳ Shared: ":"")+p.name+" ("+p.ids.length+" frames)";
   selector.append(o)
  }
  selector.value=st.kind
