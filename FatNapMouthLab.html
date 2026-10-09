@@ -161,6 +161,30 @@ canvas{display:block;width:100%;height:clamp(330px,56vw,520px);cursor:crosshair;
  }
 }
 
+
+/* Editable numeric calibration fields: large enough to focus without mobile Safari zoom. */
+.num-input{
+  box-sizing:border-box;appearance:none;-webkit-appearance:none;
+  display:block;min-width:0;
+  padding:4px 5px;border-radius:8px;
+  border:1px solid #657594;background:#101929;
+  color:#ffb9d4;font:700 16px/1.2 ui-monospace,Menlo,monospace;
+  font-variant-numeric:tabular-nums;text-align:center;
+  outline-offset:1px;
+}
+.num-input:focus{border-color:#ff8db6;background:#29253a;outline:2px solid #ff89b550}
+.stat-number{width:100%;margin:3px 0 1px;height:34px}
+.inline-number{width:58px;max-width:48%;height:30px;flex:none}
+.rotation-actions .inline-number{width:54px;max-width:none;min-width:0}
+@media(max-width:710px){
+ .stats .stat{padding:3px 2px}
+ .stats .stat span{font-size:8px}
+ .stats .stat .stat-number{height:24px;margin:1px 0 0;padding:1px 2px;font-size:16px;border-radius:5px}
+ .resize-grid .inline-number{width:50px;height:25px;padding:2px 2px;border-radius:6px;font-size:16px}
+ .resize-grid .rotation-actions .inline-number{width:43px;height:25px;max-width:none}
+ .resize-grid .rotation-actions{gap:2px}
+ .resize-grid .size-label{gap:2px}
+}
 </style></head><body><main>
 <header><div><div class="over">Super Baldio Bros · Developer tool</div><h1>Fat Nap <span style="color:#f4c778">Mouth Lab</span> 👄</h1><p>Position every talking mouth without loading the game.</p></div><span class="ver" id="version">Loading…</span></header>
 <div class="layout"><aside class="card stack">
@@ -176,10 +200,10 @@ canvas{display:block;width:100%;height:clamp(330px,56vw,520px);cursor:crosshair;
 <div class="help">Tap the mouth, then use the controller below to move, resize or rotate it. Press ▶ Talk to preview opening and closing on the selected frame (simulated speech, not a voice recording).</div>
 <div class="zoom"><label for="zoom" style="margin:0">Zoom</label><input id="zoom" type="range" min="2" max="15" step=".5" value="7"><b id="zoomVal">7×</b><button id="mode">Face view</button></div>
 <div class="stats">
-<div class="stat"><span>Frame X offset</span><strong class="hot" id="dx">—</strong><small>+ means right</small></div>
-<div class="stat"><span>Frame Y offset</span><strong class="hot" id="dy">—</strong><small>+ means down</small></div>
-<div class="stat"><span>Mouth position X</span><strong id="posx">—</strong><small>Game pixels relative to feet</small></div>
-<div class="stat"><span>Mouth position Y</span><strong id="posy">—</strong><small>Game pixels relative to feet</small></div>
+<div class="stat"><span>Frame X offset</span><input class="num-input stat-number" id="dxInput" type="text" inputmode="decimal" aria-label="Frame X offset" title="Type frame X offset in game pixels" value="0"><small>+ means right</small></div>
+<div class="stat"><span>Frame Y offset</span><input class="num-input stat-number" id="dyInput" type="text" inputmode="decimal" aria-label="Frame Y offset" title="Type frame Y offset in game pixels" value="0"><small>+ means down</small></div>
+<div class="stat"><span>Mouth position X</span><input class="num-input stat-number" id="posxInput" type="text" inputmode="decimal" aria-label="Mouth position X" title="Type final mouth X position in game pixels" value="0"><small>Game pixels relative to feet</small></div>
+<div class="stat"><span>Mouth position Y</span><input class="num-input stat-number" id="posyInput" type="text" inputmode="decimal" aria-label="Mouth position Y" title="Type final mouth Y position in game pixels" value="0"><small>Game pixels relative to feet</small></div>
 </div>
 <div class="touchpanel">
 <div class="touchhead"><strong>👆 Mouth controller</strong><small id="selectedLabel">Mouth selected ✓</small></div>
@@ -187,9 +211,9 @@ canvas{display:block;width:100%;height:clamp(330px,56vw,520px);cursor:crosshair;
 <div class="pad" id="pad" aria-label="Move or resize mouth from this separate touchpad"><div class="padlabel" id="padLabel">DRAG YOUR THUMB HERE</div><div class="padknob" id="padKnob">✥</div></div>
 <p class="pad-note" id="padHint">Drag anywhere in this pad. Your thumb never covers Fat Nap's face.</p>
 <div class="resize-grid">
-<div><div class="size-label"><label for="widthSlider" style="margin:0">↔ Mouth width</label><b id="widthValue">100%</b></div><input id="widthSlider" type="range" min=".5" max="2.5" step=".05" value="1"></div>
-<div><div class="size-label"><label for="heightSlider" style="margin:0">↕ Mouth height</label><b id="heightValue">100%</b></div><input id="heightSlider" type="range" min=".5" max="2.5" step=".05" value="1"></div>
-<div><div class="size-label"><label for="rotationSlider" style="margin:0">⟳ Tilt</label><span class="rotation-actions"><button id="rotMinus" aria-label="Rotate counterclockwise one degree">−</button><b id="rotationValue">0°</b><button id="rotPlus" aria-label="Rotate clockwise one degree">+</button></span></div><input id="rotationSlider" type="range" min="-180" max="180" step="1" value="0"></div>
+<div><div class="size-label"><label for="widthSlider" style="margin:0">↔ Mouth width</label><input class="num-input inline-number" id="widthInput" type="text" inputmode="decimal" aria-label="Mouth width multiplier" title="1 means 100%, 0.85 means 85%" value="1"></div><input id="widthSlider" type="range" min=".5" max="2.5" step=".05" value="1"></div>
+<div><div class="size-label"><label for="heightSlider" style="margin:0">↕ Mouth height</label><input class="num-input inline-number" id="heightInput" type="text" inputmode="decimal" aria-label="Mouth height multiplier" title="1 means 100%, 0.5 means 50%" value="1"></div><input id="heightSlider" type="range" min=".5" max="2.5" step=".05" value="1"></div>
+<div><div class="size-label"><label for="rotationSlider" style="margin:0">⟳ Tilt</label><span class="rotation-actions"><button id="rotMinus" aria-label="Rotate counterclockwise one degree">−</button><input class="num-input inline-number rotation-number" id="rotationInput" type="text" inputmode="decimal" aria-label="Mouth rotation angle in degrees" title="Type rotation in degrees, from -180 to 180" value="0"><button id="rotPlus" aria-label="Rotate clockwise one degree">+</button></span></div><input id="rotationSlider" type="range" min="-180" max="180" step="1" value="0"></div>
 </div></div>
 <div class="help" style="text-align:center">Or fine-tune by 0.25 game pixels</div>
 <div class="dpad"><span></span><button id="up">↑ Up</button><span></span>
