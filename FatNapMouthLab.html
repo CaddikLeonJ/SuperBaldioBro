@@ -119,6 +119,11 @@ canvas{display:block;width:100%;height:clamp(330px,56vw,520px);cursor:crosshair;
 .talk-preview{position:absolute;right:7px;top:6px;z-index:3;padding:7px 12px;border-radius:9px;background:#85334b;border-color:#ff99bf;box-shadow:0 4px 16px #05071399;font-size:13px;font-weight:850;white-space:nowrap}
 .talk-preview.playing{background:#384a66;border-color:#8da2c4;color:#fff}
 @media(max-width:710px){.talk-preview{top:5px;right:5px;border-radius:7px;padding:4px 9px;font-size:11px;line-height:1.2}}
+
+.marker-toggle{pointer-events:auto;cursor:pointer;color:#e7f0ff;font-weight:800;font-size:11px;line-height:1.15;padding:6px 9px;z-index:3;white-space:nowrap;background:#151d2ce9;border:1px solid #647d99}
+.marker-toggle[aria-pressed="false"]{color:#ced7e8;border-color:#536075}
+.marker-toggle:disabled{opacity:.75;cursor:default;pointer-events:none}
+@media(max-width:710px){.marker-toggle{top:5px;left:5px;font-size:10px;padding:4px 7px}}
 </style></head><body><main>
 <header><div><div class="over">Super Baldio Bros · Developer tool</div><h1>Fat Nap <span style="color:#f4c778">Mouth Lab</span> 👄</h1><p>Position every talking mouth without loading the game.</p></div><span class="ver" id="version">Loading…</span></header>
 <div class="layout"><aside class="card stack">
@@ -130,7 +135,7 @@ canvas{display:block;width:100%;height:clamp(330px,56vw,520px);cursor:crosshair;
 <div><label>GitHub sync</label><div class="status" id="status">Loading current positions…</div></div>
 </aside><section class="card">
 <div class="viewerhead"><div><div id="frameTitle">Crouching • Frame 1</div><div id="fileName"></div></div><div class="row"><button id="flipMobile" aria-label="Flip facing direction" title="Flip direction">⇄</button><button id="prev">◀</button><button id="next">▶</button></div></div>
-<div class="canvasbox selected" id="canvasFrame"><canvas id="canvas"></canvas><div class="badge" id="markerLabel">Pink ⊕ talking mouth · Blue ⊕ auto point</div><button id="talkPreview" class="talk-preview" aria-pressed="false" title="Preview how this mouth opens and closes during speech">▶ Talk</button></div>
+<div class="canvasbox selected" id="canvasFrame"><canvas id="canvas"></canvas><button id="markerToggle" type="button" class="badge marker-toggle" aria-pressed="true" title="Show or hide mouth markers">◉ Markers On</button><button id="talkPreview" class="talk-preview" aria-pressed="false" title="Preview how this mouth opens and closes during speech">▶ Talk</button></div>
 <div class="help">Tap the mouth, then use the controller below to move, resize or rotate it. Press ▶ Talk to preview opening and closing on the selected frame (simulated speech, not a voice recording).</div>
 <div class="zoom"><label for="zoom" style="margin:0">Zoom</label><input id="zoom" type="range" min="2" max="15" step=".5" value="7"><b id="zoomVal">7×</b><button id="mode">Face view</button></div>
 <div class="stats">
@@ -175,7 +180,7 @@ const POSES=[
 ];
 const el=id=>document.getElementById(id);
 const c=el("canvas"),x=c.getContext("2d"),cl=(v,a,b)=>Math.min(b,Math.max(a,v)),fatNapMouthDetectCache=new WeakMap();
-const st={kind:"crouch",i:0,dir:1,zoom:7,face:true,selected:true,controlMode:"move",activePad:null,talking:false,talkStart:0,talkRaf:0,talkLevel:.7,ready:false,img:null,anchor:null,W:0,H:0,ox:0,oy:0,original:{},changes:{},base:{},bounds:{},version:"",drag:false};
+const st={kind:"crouch",i:0,dir:1,zoom:7,face:true,selected:true,controlMode:"move",activePad:null,talking:false,talkStart:0,talkRaf:0,talkLevel:.7,markersVisible:true,ready:false,img:null,anchor:null,W:0,H:0,ox:0,oy:0,original:{},changes:{},base:{},bounds:{},version:"",drag:false};
 const pose=()=>POSES.find(z=>z.id===st.kind),filename=()=>file(pose().ids[st.i]),key=()=>st.kind+"|"+filename(),orig=()=>({dx:0,dy:0,w:1,h:1,r:0,...(st.original[key()]||{})}),tune=()=>({...orig(),...(st.changes[key()]||{})}),base=()=>st.base[st.kind]||{dx:0,dy:0};
 const num=v=>Math.round(v*4)/4;
 function params(){if(!st.ready)return null;const im=st.img,b=st.bounds[filename()],s=96*pose().size/im.naturalHeight;
@@ -196,8 +201,8 @@ function draw(updateControls=true){
  for(let i=Math.floor(top/10)*10;i<bottom;i+=10){x.strokeStyle=i===0?"#886e55":"#25324a";x.lineWidth=(i===0?1.2:.5)/z;x.beginPath();x.moveTo(left,i);x.lineTo(right,i);x.stroke()}
  if(st.ready){const p=params(),a=autoMouth();x.save();if(st.dir<0)x.scale(-1,1);
  x.drawImage(st.img,p.x,p.y,p.w,p.h);
- if(a){x.strokeStyle="#6ad6ff";x.lineWidth=1.5/z;x.beginPath();x.arc(a.x,a.y,7/z,0,2*Math.PI);x.moveTo(a.x-11/z,a.y);x.lineTo(a.x+11/z,a.y);x.moveTo(a.x,a.y-11/z);x.lineTo(a.x,a.y+11/z);x.stroke()}
- if(m){const level=st.talking?st.talkLevel:.7,mw=(641*(82/1027))*.095*tune().w,mh=(1.15+level*3.9)*tune().h;x.save();x.translate(m.x,m.y);x.rotate(tune().r*Math.PI/180);if(level>.025){x.globalAlpha=.92;x.fillStyle="#351414";x.beginPath();x.ellipse(0,0,mw/2,mh/2,0,0,2*Math.PI);x.fill();if(level>.34){x.globalAlpha=.82;x.fillStyle="#d97878";x.beginPath();x.ellipse(0,mh*.12,mw*.28,mh*.18,0,0,2*Math.PI);x.fill()}}x.restore();x.strokeStyle="#ff65a3";x.lineWidth=1.6/z;x.beginPath();x.arc(m.x,m.y,11/z,0,2*Math.PI);x.moveTo(m.x-18/z,m.y);x.lineTo(m.x+18/z,m.y);x.moveTo(m.x,m.y-18/z);x.lineTo(m.x,m.y+18/z);x.stroke()}
+ if(a&&st.markersVisible&&!st.talking){x.strokeStyle="#6ad6ff";x.lineWidth=1.5/z;x.beginPath();x.arc(a.x,a.y,7/z,0,2*Math.PI);x.moveTo(a.x-11/z,a.y);x.lineTo(a.x+11/z,a.y);x.moveTo(a.x,a.y-11/z);x.lineTo(a.x,a.y+11/z);x.stroke()}
+ if(m){const level=st.talking?st.talkLevel:.7,mw=(641*(82/1027))*.095*tune().w,mh=(1.15+level*3.9)*tune().h;x.save();x.translate(m.x,m.y);x.rotate(tune().r*Math.PI/180);if(level>.025){x.globalAlpha=.92;x.fillStyle="#351414";x.beginPath();x.ellipse(0,0,mw/2,mh/2,0,0,2*Math.PI);x.fill();if(level>.34){x.globalAlpha=.82;x.fillStyle="#d97878";x.beginPath();x.ellipse(0,mh*.12,mw*.28,mh*.18,0,0,2*Math.PI);x.fill()}}x.restore();if(st.markersVisible&&!st.talking){x.strokeStyle="#ff65a3";x.lineWidth=1.6/z;x.beginPath();x.arc(m.x,m.y,11/z,0,2*Math.PI);x.moveTo(m.x-18/z,m.y);x.lineTo(m.x+18/z,m.y);x.moveTo(m.x,m.y-18/z);x.lineTo(m.x,m.y+18/z);x.stroke()}}
  x.restore();
  }else{x.fillStyle="#c6d4e7";x.font="3px Arial";x.textAlign="center";x.fillText("Loading sprite...",0,-10)}
  x.restore();if(updateControls)stats()
@@ -227,9 +232,26 @@ function toggleTalkPreview(force){
  const b=el("talkPreview");b.textContent=next?"■ Stop":"▶ Talk";
  b.classList.toggle("playing",next);b.setAttribute("aria-pressed",String(next));
  b.title=next?"Stop simulated talking-mouth preview":"Preview how this mouth opens and closes during speech";
+ updateMarkerToggle();
  if(next){st.talkStart=performance.now();st.talkRaf=requestAnimationFrame(speechPreviewTick)}
  draw(false)
 }
+
+function updateMarkerToggle(){
+ const b=el("markerToggle");
+ b.disabled=st.talking;
+ b.textContent=st.talking?"◌ Auto Hidden":st.markersVisible?"◉ Markers On":"◌ Markers Off";
+ b.setAttribute("aria-pressed",String(st.markersVisible));
+ b.title=st.talking?"Markers hidden automatically during Talk Preview":st.markersVisible?"Hide blue and pink calibration markers":"Show blue and pink calibration markers";
+}
+el("markerToggle").onclick=()=>{
+ if(st.talking)return;
+ st.markersVisible=!st.markersVisible;
+ try{localStorage.setItem("fatnap-mouthlab-markers",st.markersVisible?"on":"off")}catch{}
+ updateMarkerToggle();
+ draw(false);
+};
+
 el("talkPreview").onclick=()=>toggleTalkPreview();
 document.addEventListener("visibilitychange",()=>{if(document.hidden&&st.talking)toggleTalkPreview(false)});
 function stats(){
@@ -243,7 +265,7 @@ function stats(){
  el("widthSlider").value=t.w;el("heightSlider").value=t.h;el("rotationSlider").value=t.r;el("rotationValue").textContent=(t.r>0?"+":"")+t.r+"°";
  el("selectedLabel").textContent=st.selected?"Mouth selected ✓":"Tap the pink mouth";
  el("canvasFrame").classList.toggle("selected",st.selected);
- el("markerLabel").textContent=st.selected?"Pink ⊕ SELECTED · Blue ⊕ auto":"Tap pink mouth to select";
+ updateMarkerToggle();
  el("posx").textContent=m?m.x.toFixed(2):"—";
  el("posy").textContent=m?m.y.toFixed(2):"—";
  el("zoomVal").textContent=st.zoom+"×";
@@ -442,4 +464,6 @@ async function syncGame(){
  }catch(e){el("status").textContent="Offline: using embedded settings (v"+st.version+"). "+e.message}
  buttonFrames();loadSprite()
 }
-st.base=INITIAL.base;st.original=INITIAL.frames;st.bounds=INITIAL.bounds;st.version=INITIAL.version;syncGame();</script></body></html>
+st.base=INITIAL.base;st.original=INITIAL.frames;st.bounds=INITIAL.bounds;st.version=INITIAL.version;
+try{st.markersVisible=localStorage.getItem("fatnap-mouthlab-markers")!=="off"}catch{}
+updateMarkerToggle();syncGame();</script></body></html>
