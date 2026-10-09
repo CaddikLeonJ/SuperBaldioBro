@@ -124,7 +124,7 @@ canvas{display:block;width:100%;height:clamp(330px,56vw,520px);cursor:crosshair;
 <div class="note"><strong>No guessing:</strong> X and Y match the per-frame offsets in the game's HTML. Pink is the actual talking mouth. Blue is the game's unadjusted mouth-detection point.</div>
 <div><label>GitHub sync</label><div class="status" id="status">Loading current positions…</div></div>
 </aside><section class="card">
-<div class="viewerhead"><div><div id="frameTitle">Crouching • Frame 1</div><div id="fileName"></div></div><div class="row"><button id="prev">◀</button><button id="next">▶</button></div></div>
+<div class="viewerhead"><div><div id="frameTitle">Crouching • Frame 1</div><div id="fileName"></div></div><div class="row"><button id="flipMobile" aria-label="Flip facing direction" title="Flip direction">⇄</button><button id="prev">◀</button><button id="next">▶</button></div></div>
 <div class="canvasbox selected" id="canvasFrame"><canvas id="canvas"></canvas><div class="badge" id="markerLabel">Pink ⊕ talking mouth · Blue ⊕ auto point</div></div>
 <div class="help">Tap his mouth to select it. Then use the separate controller below to move or resize it without obscuring his face.</div>
 <div class="zoom"><label for="zoom" style="margin:0">Zoom</label><input id="zoom" type="range" min="2" max="15" step=".5" value="7"><b id="zoomVal">7×</b><button id="mode">Face view</button></div>
@@ -178,7 +178,7 @@ function autoMouth(){const a=params();return a?{x:a.x+st.anchor.x*a.s,y:a.y+st.a
 function mouth(){const a=autoMouth();return a?{x:a.x+base().dx+tune().dx,y:a.y+base().dy+tune().dy}:null}
 function sizeCanvas(){const rect=c.getBoundingClientRect(),d=Math.min(3,devicePixelRatio||1);st.W=rect.width;st.H=rect.height;c.width=Math.round(st.W*d);c.height=Math.round(st.H*d);x.setTransform(d,0,0,d,0,0)}
 function draw(){
- if(!st.W)sizeCanvas();
+ if(!st.W||Math.abs(c.getBoundingClientRect().width-st.W)>1||Math.abs(c.getBoundingClientRect().height-st.H)>1)sizeCanvas();
  const W=st.W,H=st.H,z=st.zoom,m=mouth(),focus=autoMouth();
  // Lock camera on the unadjusted detector so the sprite stays still while dragging.
  st.ox=st.face&&focus?W/2-focus.x*st.dir*z:W/2;
@@ -282,6 +282,7 @@ el("zoom").oninput=e=>{st.zoom=+e.target.value;draw()};
 el("mode").onclick=()=>{st.face=!st.face;draw()};
 el("rightFace").onclick=()=>{st.dir=1;el("rightFace").className="sel";el("leftFace").className="";draw()};
 el("leftFace").onclick=()=>{st.dir=-1;el("leftFace").className="sel";el("rightFace").className="";draw()};
+el("flipMobile").onclick=()=>el(st.dir===1?"leftFace":"rightFace").click();
 el("prev").onclick=()=>{if(st.i>0){st.i--;buttonFrames();loadSprite()}};
 el("next").onclick=()=>{if(st.i<pose().ids.length-1){st.i++;buttonFrames();loadSprite()}};
 el("pose").onchange=e=>{st.kind=e.target.value;st.i=0;buttonFrames();loadSprite()};
