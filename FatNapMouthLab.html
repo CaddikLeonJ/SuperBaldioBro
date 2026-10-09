@@ -319,7 +319,8 @@ function previewMouthSize(level){
   const baseHeight=i===2?.9+level*3.05:1.15+level*3.9;
   return {w:baseWidth*w/.85,h:baseHeight*h/.5}
  }
- if(isPoweredKind(st.kind)){
+ if(isPoweredKind(st.kind)||st.form==="powered"){
+  // Also use this rendering for shared normal sprites when viewed in 6'4 280 form.
   // Preview in the powered sprite's local coordinate space, before the
   // uniform 3.75x Clout Power gameplay scale. This preserves the exact
   // proportions of the game's drawFatNapMouthShape implementation.
@@ -879,7 +880,7 @@ function finishSpriteLoad(im,selected,frame=null){
 }
 
 function loadSprite(){
- if(st.talking)st.talkStart=performance.now();
+ if(st.talking&&!st.playingFrames)st.talkStart=performance.now();
  resetCameraForFrame();st.ready=false;st.anchor=null;st.img=null;st.sheetFrame=null;st.spriteError="";draw();
  const selected=key();
  if(isSpecialKind(st.kind)){
@@ -910,6 +911,8 @@ function loadSprite(){
  im.src=sources[sourceIndex]
 }
 function commitEdit(dx,dy,w=tune().w,h=tune().h,r=tune().r){
+ // Freeze any animation loop as soon as a frame is being calibrated.
+ if(st.playingFrames)stopFramePreview();
  const d={dx:cl(num(dx),-80,80),dy:cl(num(dy),-80,80),w:cl(Math.round(w*100)/100,.5,2.5),h:cl(Math.round(h*100)/100,.5,2.5),r:cl(Math.round(r),-180,180)},o=orig();
  if(d.dx===o.dx&&d.dy===o.dy&&d.w===o.w&&d.h===o.h&&d.r===o.r)delete st.changes[key()];else st.changes[key()]=d;
  try{localStorage.setItem("fatnap-mouthlab-edits",JSON.stringify(st.changes))}catch{}
