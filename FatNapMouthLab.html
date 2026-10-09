@@ -207,9 +207,9 @@ function draw(updateControls=true){
  }else{x.fillStyle="#c6d4e7";x.font="3px Arial";x.textAlign="center";x.fillText("Loading sprite...",0,-10)}
  x.restore();if(updateControls)stats()
 }
-// Match the normal-form mouth renderer: width fixed per frame, height responds
-// to voice level, and the tongue appears above the .34 speaking threshold.
-// Demo uses a simulated voice envelope; real gameplay reads Fat Nap's audio.
+// Talk Preview: every loop tests the FULL voice-level range (including exact
+// zero and one), then the natural speech approximation. It never changes edits.
+// Actual gameplay still drives this exact mouth shape with its voice analyser.
 function speechPreviewLevel(t){
  const u=t%4.10;
  if(u<.18||u>3.63||(u>1.22&&u<1.43)||(u>2.36&&u<2.57))return 0;
@@ -217,9 +217,34 @@ function speechPreviewLevel(t){
  const loudness=.34+.36*Math.sin(t*3.15-.35)**2;
  return cl(.08+pulse*loudness,0,1);
 }
+const TALK_PREVIEW_RANGE_DURATION=4.05,TALK_PREVIEW_CYCLE=8.15;
+const TALK_PREVIEW_STEPS=[
+ {start:0,end:.55,from:0,to:0,label:"◌ Closed 0%"},
+ {start:.55,end:1.20,from:0,to:.25,label:"↗ Open 25%"},
+ {start:1.20,end:1.85,from:.25,to:.50,label:"↗ Open 50%"},
+ {start:1.85,end:2.50,from:.50,to:.75,label:"↗ Open 75%"},
+ {start:2.50,end:3.20,from:.75,to:1,label:"↗ Open 100%"},
+ {start:3.20,end:4.05,from:1,to:0,label:"↘ Closing"}
+];
+function fullRangePreview(t){
+ const u=t%TALK_PREVIEW_CYCLE;
+ if(u>=TALK_PREVIEW_RANGE_DURATION){
+  const natural=speechPreviewLevel(u-TALK_PREVIEW_RANGE_DURATION);
+  return {level:natural,label:"◌ Natural speech"};
+ }
+ const step=TALK_PREVIEW_STEPS.find(v=>u<v.end)||TALK_PREVIEW_STEPS[TALK_PREVIEW_STEPS.length-1];
+ // Smoothly transition between levels, then hold long enough to inspect each.
+ const span=step.to===0&&step.from===1?.48:.22;
+ const f=cl((u-step.start)/span,0,1);
+ const eased=f*f*(3-2*f);
+ return {level:step.from+(step.to-step.from)*eased,label:step.label};
+}
 function speechPreviewTick(now){
  if(!st.talking)return;
- st.talkLevel=speechPreviewLevel((now-st.talkStart)/1000);
+ const preview=fullRangePreview((now-st.talkStart)/1000);
+ st.talkLevel=preview.level;
+ const indicator=el("markerToggle");
+ if(indicator.textContent!==preview.label)indicator.textContent=preview.label;
  draw(false);
  st.talkRaf=requestAnimationFrame(speechPreviewTick)
 }
@@ -231,7 +256,7 @@ function toggleTalkPreview(force){
  st.talkLevel=next?0:.7;
  const b=el("talkPreview");b.textContent=next?"■ Stop":"▶ Talk";
  b.classList.toggle("playing",next);b.setAttribute("aria-pressed",String(next));
- b.title=next?"Stop simulated talking-mouth preview":"Preview how this mouth opens and closes during speech";
+ b.title=next?"Stop full range and simulated speech preview":"Preview full mouth range, then natural simulated talking";
  updateMarkerToggle();
  if(next){st.talkStart=performance.now();st.talkRaf=requestAnimationFrame(speechPreviewTick)}
  draw(false)
@@ -240,7 +265,8 @@ function toggleTalkPreview(force){
 function updateMarkerToggle(){
  const b=el("markerToggle");
  b.disabled=st.talking;
- b.textContent=st.talking?"◌ Auto Hidden":st.markersVisible?"◉ Markers On":"◌ Markers Off";
+ if(!st.talking)b.textContent=st.markersVisible?"◉ Markers On":"◌ Markers Off";
+ else if(!b.textContent.startsWith("↗")&&!b.textContent.startsWith("↘")&&!b.textContent.startsWith("◌ Closed")&&!b.textContent.startsWith("◌ Natural"))b.textContent="◌ Closed 0%";
  b.setAttribute("aria-pressed",String(st.markersVisible));
  b.title=st.talking?"Markers hidden automatically during Talk Preview":st.markersVisible?"Hide blue and pink calibration markers":"Show blue and pink calibration markers";
 }
@@ -279,6 +305,7 @@ function buttonFrames(){
  pose().ids.forEach((n,i)=>{const b=document.createElement("button");b.className=i===st.i?"sel":"";b.innerHTML="Frame "+(i+1)+"<small>"+n+".png</small>";b.onclick=()=>{st.i=i;buttonFrames();loadSprite()};target.append(b)});stats()
 }
 function loadSprite(){
+ if(st.talking)st.talkStart=performance.now();
  st.ready=false;st.anchor=null;st.img=null;draw();const im=new Image(),selected=key();im.crossOrigin="anonymous";
  im.onload=()=>{if(selected!==key())return;st.img=im;st.anchor=detectFatNapMouthAnchor(im,st.bounds[filename()]||null,null,st.kind);st.ready=!!st.anchor;if(!st.ready)el("status").textContent="Mouth detector could not read this sprite.";draw()};
  im.onerror=()=>{if(selected===key())el("status").textContent="Unable to load sprite from GitHub."};
