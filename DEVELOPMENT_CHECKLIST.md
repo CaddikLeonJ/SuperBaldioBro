@@ -11,7 +11,8 @@
 - [ ] Playtest Scream against squirrels, including joystick movement opposite to the aim, diagonal/up/down drag aim, crouching, jumping, powered mode and squirrel-body platforms
 - [ ] Record/upload and integrate Fat Nap's **actual Scream sound** to replace temporary test synthesis
 - [ ] **Dedicated standing-still Scream animation**, retaining walking, jumping, crouching and other existing action sprites when moving or performing those actions
-- [ ] Fine-tune Scream strength, distance, knockback, recovery and sound/FX after testing
+- [x] Scream cone grows from a small mouth emission to a wide distant wave; closer enemies take more damage (v0.4.244)
+- [ ] Fine-tune Scream strength, distance-based falloff, knockback, recovery and sound/FX after testing
 
 ## Later additions — not yet implemented
 - [ ] **Destructible environmental objects** — boxes, crates and other props that can be broken by headbutts, kicks and attacks; test destruction effects, collision and drops
