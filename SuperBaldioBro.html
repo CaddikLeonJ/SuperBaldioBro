@@ -592,12 +592,12 @@ function updateScream(dt){
  SCREAM.emit-=dt;
  while(SCREAM.emit<=0){
   SCREAM.emit+=.095;
-  SCREAM.waves.push({x:P.x+P.w/2+SCREAM.dir*18*scale,y:playerVisualFeetY()-64*scale,aimX:SCREAM.aimX,aimY:SCREAM.aimY,age:0,life:.54,scale});
+  SCREAM.waves.push({x:P.x+P.w/2+SCREAM.dir*18*scale,y:playerVisualFeetY()-(P.crouch?38:64)*scale,aimX:SCREAM.aimX,aimY:SCREAM.aimY,age:0,life:.54,scale});
   if(SCREAM.waves.length>36)SCREAM.waves.shift()
  }
  if(squirrel.active&&squirrel.hp>0){
   const sx=squirrel.x+squirrel.w/2,sc=P.x+P.w/2,targetY=squirrelRect().y+squirrel.h*.48,
-        dx=sx-sc,dy=targetY-(playerVisualFeetY()-64*scale),
+        dx=sx-sc,dy=targetY-(playerVisualFeetY()-(P.crouch?38:64)*scale),
         along=dx*SCREAM.aimX+dy*SCREAM.aimY,
         across=Math.abs(dx*SCREAM.aimY-dy*SCREAM.aimX);
   if(along>=-5&&along<=200*scale&&across<=72*scale){
@@ -2846,7 +2846,7 @@ walkFrame=function(){
 runFrame=function(){const i=Math.floor(S.t*10)%4;if((i===0||i===2)&&i!==lastRunSfxFrame)footstep(true);lastRunSfxFrame=i;uniformSprite(runImgs[i],P.dir,.92)};
 headFrame=function(){uniformSprite(headImgs[headT<.035?0:headT<.07?1:headT<.32?2:3],P.dir,(clout.powered||clout.detransforming)?1:(80/96))};
 jumpFrame=function(){uniformSprite(jumpImgs[jumpPrep?0:P.vy<180?1:2],P.dir,1.10)};
-fartFrame=function(){uniformSprite(fartImgs[fartIndex()],F.dir)};
+fartFrame=function(){uniformSprite(fartImgs[fartIndex()],SCREAM.active?SCREAM.dir:F.dir)};
 lightheadedFrame=function(){const elapsed=lightheadedDuration-lightheadedT;const i=elapsed<.24||lightheadedT<.24?2:Math.floor((elapsed-.24)/.40)%2;uniformSprite(lightImgs[i])};
 const cloutTransformAudioURL='https://raw.githubusercontent.com/CaddikLeonJ/SuperBaldioBro/main/'+encodeURI('Ayofatnap Super Goku.mp3');
 const cloutBreathAudioURL='https://raw.githubusercontent.com/CaddikLeonJ/SuperBaldioBro/main/'+encodeURI('Ayofatnap Breath Sound Effect.mp3');
