@@ -123,6 +123,10 @@ canvas{display:block;width:100%;height:clamp(330px,56vw,520px);cursor:crosshair;
 .marker-toggle{pointer-events:auto;cursor:pointer;color:#e7f0ff;font-weight:800;font-size:11px;line-height:1.15;padding:6px 9px;z-index:3;white-space:nowrap;background:#151d2ce9;border:1px solid #647d99}
 .marker-toggle[aria-pressed="false"]{color:#ced7e8;border-color:#536075}
 .marker-toggle:disabled{opacity:.75;cursor:default;pointer-events:none}
+.mouth-speech-toggle{position:absolute;right:8px;bottom:8px;z-index:4;max-width:calc(100% - 16px);padding:7px 10px;background:#20384aeb;border:1px solid #80b2d1;color:#fff;font-size:12px;font-weight:800;border-radius:9px;white-space:nowrap}
+.mouth-speech-toggle[aria-pressed="true"]{background:#63333eeb;border-color:#ff94b4}
+.frames button.mouth-off-frame{border-color:#dc8a9b;color:#ffe0e7;background:#54313d}
+@media(max-width:710px){.mouth-speech-toggle{right:5px;bottom:5px;padding:4px 7px;font-size:10px;border-radius:6px}}
 @media(max-width:710px){.marker-toggle{top:5px;left:5px;font-size:10px;padding:4px 7px}}
 
 /* Mobile spacing fix: keep the tilt slider and +/- inside the controller, never over nudge buttons. */
@@ -217,7 +221,7 @@ canvas{display:block;width:100%;height:clamp(330px,56vw,520px);cursor:crosshair;
 <div><label>GitHub sync</label><div class="status" id="status">Loading current positions…</div></div>
 </aside><section class="card">
 <div class="viewerhead"><div><div id="frameTitle">Crouching • Frame 1</div><div id="fileName"></div></div><div class="row"><button id="flipMobile" aria-label="Flip facing direction" title="Flip direction">⇄</button><button id="playFrames" type="button" title="Cycle through all frames of the selected animation" aria-pressed="false">▶ Loop</button><button id="prev">◀</button><button id="next">▶</button></div></div>
-<div class="canvasbox selected" id="canvasFrame"><canvas id="canvas"></canvas><button id="markerToggle" type="button" class="badge marker-toggle" aria-pressed="true" title="Show or hide mouth markers">◉ Markers On</button><button id="talkPreview" class="talk-preview" aria-pressed="false" title="Preview how this mouth opens and closes during speech">▶ Talk</button></div>
+<div class="canvasbox selected" id="canvasFrame"><canvas id="canvas"></canvas><button id="markerToggle" type="button" class="badge marker-toggle" aria-pressed="true" title="Show or hide mouth markers">◉ Markers On</button><button id="talkPreview" class="talk-preview" aria-pressed="false" title="Preview how this mouth opens and closes during speech">▶ Talk</button><button id="speakingMouthToggle" type="button" class="mouth-speech-toggle" aria-pressed="false" title="Switch the extra animated speaking mouth on or off for just this frame">👄 Speaking mouth ON</button></div>
 <div class="help">Tap the mouth, then use the controller below to move, resize or rotate it. Press ▶ Talk to preview speech, or ▶ Loop to cycle through the actual animation frames. Looping never changes saved mouth positions.</div>
 <div class="zoom"><label for="zoom" style="margin:0">Zoom</label><input id="zoom" type="range" min="2" max="15" step=".5" value="7"><b id="zoomVal">7×</b><button id="mode">Face view</button><button id="panToggle" class="sel" aria-pressed="true" title="Drag Fat Nap around the preview with your finger">✥ Drag</button><button id="resetView" title="Recenter the preview and reset zoom">⟲ Reset</button></div>
 <div class="stats">
@@ -239,7 +243,7 @@ canvas{display:block;width:100%;height:clamp(330px,56vw,520px);cursor:crosshair;
 <div class="help" style="text-align:center">Or fine-tune by 0.01 game pixels per tap</div>
 <div class="dpad"><button id="up">↑ Up</button><button id="down">↓ Down</button><button id="left">← Left</button><button id="right">Right →</button><button id="reset">Reset</button></div>
 <div class="controls"><button class="cta" id="copyFrame">Copy this frame</button><button class="cta" id="copyAll">Copy all changes</button></div>
-<p class="help">Paste the copied coordinates into our chat. I'll update the real game on GitHub.</p>
+<p class="help">Switch off the speaking mouth on any frame with an open mouth already painted on the sprite. Choices are saved here; copy the changes into our chat for a game update.</p>
 <div class="code" id="code">Loading…</div>
 <div class="row spread" style="margin-top:12px"><small id="count"></small><button id="discard" style="font-size:12px">Discard unsent edits</button></div>
 </section></div></main><script>
@@ -273,7 +277,7 @@ const isPoweredKind=kind=>["powerIdle","powerWalk","powerRun","powerScream"].inc
 const isSpecialKind=kind=>kind==="crawl"||kind==="baldBang"||kind==="transform"||isPoweredKind(kind);
 const filename=()=>isSpecialKind(st.kind)?st.kind+":"+pose().ids[st.i]:file(pose().ids[st.i]);
 const key=()=> (isPoweredKind(st.kind)?"powered":st.kind)+"|"+filename();
-const orig=()=>({dx:0,dy:0,w:.85,h:.5,r:0,...(st.original[key()]||{})}),tune=()=>({...orig(),...(st.changes[key()]||{})});
+const orig=()=>({dx:0,dy:0,w:.85,h:.5,r:0,noMouth:false,...(st.original[key()]||{})}),tune=()=>({...orig(),...(st.changes[key()]||{})});
 const base=()=>st.base[isPoweredKind(st.kind)?"powered":st.kind]||{dx:0,dy:0};
 const num=v=>Math.round(v*100)/100;
 function params(){
@@ -374,8 +378,8 @@ function draw(updateControls=true){
  for(let i=Math.floor(top/10)*10;i<bottom;i+=10){x.strokeStyle=i===0?"#886e55":"#25324a";x.lineWidth=(i===0?1.2:.5)/z;x.beginPath();x.moveTo(left,i);x.lineTo(right,i);x.stroke()}
  if(st.ready){const p=params(),a=autoMouth();x.save();if(st.dir<0)x.scale(-1,1);
  x.drawImage(st.img,p.x,p.y,p.w,p.h);
- if(a&&st.markersVisible&&!st.talking){x.strokeStyle="#6ad6ff";x.lineWidth=1.5/z;x.beginPath();x.arc(a.x,a.y,7/z,0,2*Math.PI);x.moveTo(a.x-11/z,a.y);x.lineTo(a.x+11/z,a.y);x.moveTo(a.x,a.y-11/z);x.lineTo(a.x,a.y+11/z);x.stroke()}
- if(m){const level=st.talking?st.talkLevel:.7,shape=previewMouthSize(level),mw=shape.w,mh=shape.h;x.save();x.translate(m.x,m.y);x.rotate(tune().r*Math.PI/180);if(level>.025){x.globalAlpha=1;x.fillStyle="#351414";x.beginPath();x.ellipse(0,0,mw/2,mh/2,0,0,2*Math.PI);x.fill();if(level>.34){x.globalAlpha=1;x.fillStyle="#d97878";x.beginPath();x.ellipse(0,mh*.12,mw*.28,mh*.18,0,0,2*Math.PI);x.fill()}}x.restore();if(st.markersVisible&&!st.talking){x.strokeStyle="#ff65a3";x.lineWidth=1.6/z;x.beginPath();x.arc(m.x,m.y,11/z,0,2*Math.PI);x.moveTo(m.x-18/z,m.y);x.lineTo(m.x+18/z,m.y);x.moveTo(m.x,m.y-18/z);x.lineTo(m.x,m.y+18/z);x.stroke()}}
+ if(a&&!tune().noMouth&&st.markersVisible&&!st.talking){x.strokeStyle="#6ad6ff";x.lineWidth=1.5/z;x.beginPath();x.arc(a.x,a.y,7/z,0,2*Math.PI);x.moveTo(a.x-11/z,a.y);x.lineTo(a.x+11/z,a.y);x.moveTo(a.x,a.y-11/z);x.lineTo(a.x,a.y+11/z);x.stroke()}
+ if(m&&!tune().noMouth){const level=st.talking?st.talkLevel:.7,shape=previewMouthSize(level),mw=shape.w,mh=shape.h;x.save();x.translate(m.x,m.y);x.rotate(tune().r*Math.PI/180);if(level>.025){x.globalAlpha=1;x.fillStyle="#351414";x.beginPath();x.ellipse(0,0,mw/2,mh/2,0,0,2*Math.PI);x.fill();if(level>.34){x.globalAlpha=1;x.fillStyle="#d97878";x.beginPath();x.ellipse(0,mh*.12,mw*.28,mh*.18,0,0,2*Math.PI);x.fill()}}x.restore();if(st.markersVisible&&!st.talking){x.strokeStyle="#ff65a3";x.lineWidth=1.6/z;x.beginPath();x.arc(m.x,m.y,11/z,0,2*Math.PI);x.moveTo(m.x-18/z,m.y);x.lineTo(m.x+18/z,m.y);x.moveTo(m.x,m.y-18/z);x.lineTo(m.x,m.y+18/z);x.stroke()}}
  x.restore();
  }else{
   // Show a readable loading/error message in screen coordinates, not offscreen in world coordinates.
@@ -506,13 +510,18 @@ function stats(){
  syncTypedValue("dxInput",t.dx);syncTypedValue("dyInput",t.dy);
  syncTypedValue("widthInput",t.w);syncTypedValue("heightInput",t.h);
  el("widthSlider").value=t.w;el("heightSlider").value=t.h;el("rotationSlider").value=t.r;syncTypedValue("rotationInput",t.r);
- el("selectedLabel").textContent=st.selected?"Mouth selected ✓":"Tap the pink mouth";
- el("canvasFrame").classList.toggle("selected",st.selected);
+ el("selectedLabel").textContent=t.noMouth?"Sprite mouth only ✓":st.selected?"Mouth selected ✓":"Tap the pink mouth";
+ el("canvasFrame").classList.toggle("selected",st.selected&&!t.noMouth);
+ const speechToggle=el("speakingMouthToggle");
+ speechToggle.textContent=t.noMouth?"🚫 Speaking mouth OFF":"👄 Speaking mouth ON";
+ speechToggle.setAttribute("aria-pressed",String(t.noMouth));
+ speechToggle.title=t.noMouth?"Only the original sprite mouth is displayed. Tap to turn on the speaking overlay.":"Tap to hide the speaking overlay on only this frame.";
+ el("talkPreview").disabled=t.noMouth;
  updateMarkerToggle();
  syncTypedValue("posxInput",m?m.x:null);syncTypedValue("posyInput",m?m.y:null);
  el("zoomVal").textContent=st.zoom+"×";
  el("mode").textContent=st.face?"Face close-up":"Whole character";
- el("code").textContent="'"+key()+"':{dx:"+t.dx+",dy:"+t.dy+",w:"+t.w+",h:"+t.h+",r:"+t.r+"},";
+ el("code").textContent="'"+key()+"':{dx:"+t.dx+",dy:"+t.dy+",w:"+t.w+",h:"+t.h+",r:"+t.r+",noMouth:"+Boolean(t.noMouth)+"},";
  el("count").textContent=Object.keys(st.changes).length+" unsent frame changes";
  el("prev").disabled=st.i===0;el("next").disabled=st.i===p.ids.length-1
 }
@@ -537,8 +546,8 @@ function startFramePreview(){
 }
 function buttonFrames(){
  el("pose").value=st.kind;const target=el("frameButtons");target.replaceChildren();
- pose().ids.forEach((n,i)=>{const b=document.createElement("button");b.className=i===st.i?"sel":"";
- b.innerHTML="Frame "+(i+1)+"<small>"+(isSpecialKind(st.kind)?"sprite "+(i+1):n+".png")+"</small>";
+ pose().ids.forEach((n,i)=>{const b=document.createElement("button"),k=(isPoweredKind(st.kind)?"powered":st.kind)+"|"+(isSpecialKind(st.kind)?st.kind+":"+n:file(n)),off=(st.changes[k]?.noMouth??st.original[k]?.noMouth)===true;b.className=(i===st.i?"sel ":"")+(off?"mouth-off-frame":"");
+ b.innerHTML="Frame "+(i+1)+"<small>"+(off?"🚫 No mouth":(isSpecialKind(st.kind)?"sprite "+(i+1):n+".png"))+"</small>";
  b.onclick=()=>{stopFramePreview();st.i=i;buttonFrames();loadSprite()};target.append(b)});
  el("playFrames").disabled=pose().ids.length<=1;
  stats()
@@ -899,14 +908,20 @@ function loadSprite(){
  };
  im.src=sources[sourceIndex]
 }
-function commitEdit(dx,dy,w=tune().w,h=tune().h,r=tune().r){
+function commitEdit(dx,dy,w=tune().w,h=tune().h,r=tune().r,noMouth=tune().noMouth){
  // Freeze any animation loop as soon as a frame is being calibrated.
  if(st.playingFrames)stopFramePreview();
- const d={dx:cl(num(dx),-80,80),dy:cl(num(dy),-80,80),w:cl(Math.round(w*100)/100,.5,2.5),h:cl(Math.round(h*100)/100,.5,2.5),r:cl(Math.round(r),-180,180)},o=orig();
- if(d.dx===o.dx&&d.dy===o.dy&&d.w===o.w&&d.h===o.h&&d.r===o.r)delete st.changes[key()];else st.changes[key()]=d;
+ const d={dx:cl(num(dx),-80,80),dy:cl(num(dy),-80,80),w:cl(Math.round(w*100)/100,.5,2.5),h:cl(Math.round(h*100)/100,.5,2.5),r:cl(Math.round(r),-180,180),noMouth:Boolean(noMouth)},o=orig();
+ if(d.dx===o.dx&&d.dy===o.dy&&d.w===o.w&&d.h===o.h&&d.r===o.r&&d.noMouth===Boolean(o.noMouth))delete st.changes[key()];else st.changes[key()]=d;
  try{localStorage.setItem("fatnap-mouthlab-edits",JSON.stringify(st.changes))}catch{}
  draw()
 }
+// Toggle talking-mouth suppression per sprite frame (without changing calibration).
+el("speakingMouthToggle").onclick=()=>{
+ const t=tune();if(st.talking)toggleTalkPreview(false);
+ commitEdit(t.dx,t.dy,t.w,t.h,t.r,!t.noMouth);
+ buttonFrames();
+};
 // Tap the mouth to select it; never move it beneath a thumb covering the image.
 // Pan only the editor's camera. Calibration values, sprite coordinates and exports
 // never change when dragging the actual canvas on iPhone or desktop.
@@ -1045,18 +1060,18 @@ el("form").onchange=e=>{
  st.i=0;refreshPoses();buttonFrames();loadSprite()
 };
 el("pose").onchange=e=>{stopFramePreview();st.kind=e.target.value;st.i=0;buttonFrames();loadSprite()};
-el("discard").onclick=()=>{if(confirm("Discard all unsent mouth adjustments?")){st.changes={};try{localStorage.removeItem("fatnap-mouthlab-edits")}catch{}draw()}};
+el("discard").onclick=()=>{if(confirm("Discard all unsent mouth adjustments and mouth visibility settings?")){st.changes={};try{localStorage.removeItem("fatnap-mouthlab-edits")}catch{}draw()}};
 function exportChanges(all){
  const keys=all?Object.keys(st.changes):[key()];
  if(!keys.length)return "No unsent changes yet.";
- return "Fat Nap Mouth Lab — v"+st.version+"\n"+keys.map(k=>{const d=st.changes[k]||st.original[k]||{dx:0,dy:0};return "'"+k+"':{dx:"+d.dx+",dy:"+d.dy+",w:"+(d.w??1)+",h:"+(d.h??1)+",r:"+(d.r??0)+"}"}).join("\n")
+ return "Fat Nap Mouth Lab — v"+st.version+"\n"+keys.map(k=>{const d=st.changes[k]||st.original[k]||{dx:0,dy:0};return "'"+k+"':{dx:"+d.dx+",dy:"+d.dy+",w:"+(d.w??1)+",h:"+(d.h??1)+",r:"+(d.r??0)+",noMouth:"+Boolean(d.noMouth)+"}"}).join("\n")
 }
 async function copy(s){try{await navigator.clipboard.writeText(s);el("code").textContent="✓ Copied!\n"+s}catch(e){prompt("Copy these coordinates:",s)}}
 el("copyFrame").onclick=()=>copy(exportChanges(false));el("copyAll").onclick=()=>copy(exportChanges(true));
 refreshPoses();
 try{const prev=JSON.parse(localStorage.getItem("fatnap-mouthlab-edits")||"{}");if(prev&&typeof prev==="object")st.changes=prev}catch{}
 window.onresize=()=>{sizeCanvas();draw()};
-const INITIAL={"version":"0.4.237","base":{"idle":{"dx":0,"dy":0.75,"scale":1},"walk":{"dx":2.5,"dy":-4.5,"scale":1},"run":{"dx":2.35,"dy":-5.5,"scale":1},"jump":{"dx":3,"dy":-4,"scale":1},"crouch":{"dx":0,"dy":0,"scale":1},"crawl":{"dx":0,"dy":0,"scale":1},"head":{"dx":0,"dy":0,"scale":1},"fart":{"dx":0,"dy":-2.75,"scale":1},"light":{"dx":4,"dy":2,"scale":1},"baldBang":{"dx":2.75,"dy":-4.25,"scale":1},"powered":{"dx":0,"dy":0,"scale":1},"transform":{"dx":0,"dy":0,"scale":1},"ko":{"dx":0,"dy":0,"scale":1}},"frames":{"idle|FAT NAP SPRITES (CHARACTER MODELS).png":{"dx":0,"dy":-0.5,"w":0.9,"h":0.5,"r":-2},"walk|FAT NAP SPRITES (CHARACTER MODELS) - 4.png":{"dx":0.75,"dy":0,"w":0.85,"h":0.5,"r":-5},"walk|FAT NAP SPRITES (CHARACTER MODELS) - 5.png":{"dx":0.5,"dy":-0.25,"w":0.85,"h":0.5,"r":-7},"walk|FAT NAP SPRITES (CHARACTER MODELS) - 6.png":{"dx":0.25,"dy":-0.25,"w":0.85,"h":0.5,"r":-6},"walk|FAT NAP SPRITES (CHARACTER MODELS) - 7.png":{"dx":-0.25,"dy":-0.25,"w":0.85,"h":0.5,"r":-6},"run|FAT NAP SPRITES (CHARACTER MODELS) - 13.png":{"dx":0,"dy":0,"w":0.9,"h":0.5,"r":-5},"run|FAT NAP SPRITES (CHARACTER MODELS) - 14.png":{"dx":0.25,"dy":-0.25,"w":0.9,"h":0.5,"r":-5},"run|FAT NAP SPRITES (CHARACTER MODELS) - 15.png":{"dx":0.25,"dy":0,"w":0.9,"h":0.5,"r":-5},"run|FAT NAP SPRITES (CHARACTER MODELS) - 16.png":{"dx":0,"dy":-0.25,"w":0.9,"h":0.5,"r":-6},"head|FAT NAP SPRITES (CHARACTER MODELS) - 21.png":{"dx":2.75,"dy":-4,"w":0.7,"h":0.5,"r":-7},"head|FAT NAP SPRITES (CHARACTER MODELS) - 22.png":{"dx":1.5,"dy":0,"w":0.7,"h":0.5,"r":-4},"head|FAT NAP SPRITES (CHARACTER MODELS) - 23.png":{"dx":37.07,"dy":3.78,"w":0.5,"h":0.5,"r":29},"head|FAT NAP SPRITES (CHARACTER MODELS) - 24.png":{"dx":2.06,"dy":-3.96,"w":0.7,"h":0.5,"r":-4},"fart|FAT NAP SPRITES (CHARACTER MODELS) - 26.png":{"dx":-1.25,"dy":3,"w":0.8,"h":0.5,"r":12},"fart|FAT NAP SPRITES (CHARACTER MODELS) - 27.png":{"dx":2,"dy":2.25,"w":0.85,"h":0.5,"r":-4},"fart|FAT NAP SPRITES (CHARACTER MODELS) - 28.png":{"dx":1,"dy":4.5,"w":1.3,"h":0.5,"r":-26},"fart|FAT NAP SPRITES (CHARACTER MODELS) - 29.png":{"dx":2.67,"dy":4.02,"w":1.35,"h":0.5,"r":-40},"ko|FAT NAP SPRITES (CHARACTER MODELS).png":{"dx":0,"dy":0.25,"w":0.9,"h":0.5,"r":-3},"crouch|FAT NAP SPRITES (CHARACTER MODELS) - 31.png":{"dx":2.5,"dy":-4,"w":0.8,"h":0.5,"r":-3},"crouch|FAT NAP SPRITES (CHARACTER MODELS) - 32.png":{"dx":1.25,"dy":0.25,"w":0.8,"h":0.5,"r":-3},"crouch|FAT NAP SPRITES (CHARACTER MODELS) - 33.png":{"dx":4.25,"dy":-0.5,"w":0.85,"h":0.5,"r":-5},"jump|FAT NAP SPRITES (CHARACTER MODELS) - 35.png":{"dx":1.58,"dy":6.78,"w":0.85,"h":0.5,"r":-7},"jump|FAT NAP SPRITES (CHARACTER MODELS) - 36.png":{"dx":0,"dy":0,"w":0.8,"h":0.5,"r":-8},"jump|FAT NAP SPRITES (CHARACTER MODELS) - 37.png":{"dx":40.36,"dy":-4.63,"w":0.85,"h":0.5,"r":-6},"light|FAT NAP SPRITES (CHARACTER MODELS) - 40.png":{"dx":0.25,"dy":2,"w":0.75,"h":0.5,"r":0},"light|FAT NAP SPRITES (CHARACTER MODELS) - 41.png":{"dx":-4,"dy":2.5,"w":0.7,"h":0.5,"r":11},"light|FAT NAP SPRITES (CHARACTER MODELS) - 42.png":{"dx":2.5,"dy":-1,"w":0.85,"h":0.5,"r":-14},"crawl|crawl:0":{"dx":2.84,"dy":-0.73,"w":0.8,"h":0.5,"r":-2},"crawl|crawl:1":{"dx":4.84,"dy":4.47,"w":0.8,"h":0.5,"r":-2},"crawl|crawl:2":{"dx":2.8,"dy":-0.74,"w":0.8,"h":0.5,"r":-3},"crawl|crawl:3":{"dx":5.09,"dy":4.47,"w":0.75,"h":0.5,"r":-2},"baldBang|baldBang:0":{"dx":-0.09,"dy":-1.09,"w":0.9,"h":0.5,"r":-4},"baldBang|baldBang:1":{"dx":0.29,"dy":-0.24,"w":0.9,"h":0.5,"r":-2},"baldBang|baldBang:2":{"dx":1.31,"dy":8.72,"w":0.8,"h":0.5,"r":-5},"baldBang|baldBang:3":{"dx":2.86,"dy":8.04,"w":0.8,"h":0.5,"r":-4},"transform|transform:0":{"dx":-1.4,"dy":-4.72,"w":0.8,"h":0.5,"r":-3},"transform|transform:1":{"dx":-0.31,"dy":-0.59,"w":0.8,"h":0.5,"r":-6},"transform|transform:2":{"dx":-0.8,"dy":0.2,"w":1,"h":0.5,"r":8},"transform|transform:3":{"dx":-8.13,"dy":-12.04,"w":1,"h":0.5,"r":-3},"transform|transform:4":{"dx":-11.44,"dy":-12.78,"w":1.15,"h":0.5,"r":-2},"transform|transform:5":{"dx":-13.61,"dy":-11.63,"w":1.25,"h":0.5,"r":0},"powered|powerIdle:0":{"dx":8.63,"dy":-29.04,"w":0.65,"h":0.5,"r":-1},"powered|powerWalk:0":{"dx":22.28,"dy":-23.67,"w":0.55,"h":0.5,"r":0},"powered|powerWalk:1":{"dx":14.09,"dy":-24.53,"w":0.55,"h":0.5,"r":0},"powered|powerWalk:2":{"dx":10,"dy":-30.38,"w":0.55,"h":0.5,"r":0},"powered|powerWalk:3":{"dx":14.38,"dy":-24.49,"w":0.55,"h":0.5,"r":0},"powered|powerRun:0":{"dx":37.49,"dy":-13.5,"w":0.7,"h":0.5,"r":0},"powered|powerRun:1":{"dx":35.33,"dy":-13.69,"w":0.7,"h":0.5,"r":0},"powered|powerRun:2":{"dx":45.11,"dy":-9.04,"w":0.7,"h":0.5,"r":0},"powered|powerRun:3":{"dx":35.31,"dy":-13.63,"w":0.7,"h":0.5,"r":0},"powered|powerScream:0":{"dx":-19.68,"dy":-30.75,"w":0.85,"h":0.5,"r":0}},"bounds":{"FAT NAP SPRITES (CHARACTER MODELS) - 37.png":[761,55,2243,1349],"FAT NAP SPRITES (CHARACTER MODELS) - 32.png":[1060,474,1944,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 23.png":[533,460,2467,2196],"FAT NAP SPRITES (CHARACTER MODELS) - 29.png":[859,293,2138,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 33.png":[1019,946,1989,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 27.png":[1064,54,1931,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 6.png":[731,53,2266,2200],"FAT NAP SPRITES (CHARACTER MODELS) - 16.png":[789,54,2210,2194],"FAT NAP SPRITES (CHARACTER MODELS) - 41.png":[996,463,2017,2191],"FAT NAP SPRITES (CHARACTER MODELS) - 5.png":[1180,51,1826,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 26.png":[1074,54,1924,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 13.png":[639,51,2403,2196],"FAT NAP SPRITES (CHARACTER MODELS) - 40.png":[982,373,2024,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 28.png":[966,76,2194,2194],"FAT NAP SPRITES (CHARACTER MODELS) - 22.png":[741,220,2265,2193],"FAT NAP SPRITES (CHARACTER MODELS) - 35.png":[937,943,2071,2194],"FAT NAP SPRITES (CHARACTER MODELS) - 21.png":[974,53,2022,2192],"FAT NAP SPRITES (CHARACTER MODELS) - 31.png":[1124,54,1877,2198],"FAT NAP SPRITES (CHARACTER MODELS) - 36.png":[949,382,2050,1971],"FAT NAP SPRITES (CHARACTER MODELS) - 42.png":[1118,69,1879,2204],"FAT NAP SPRITES (CHARACTER MODELS) - 4.png":[734,51,2263,2196],"FAT NAP SPRITES (CHARACTER MODELS) - 7.png":[1170,51,1831,2198],"FAT NAP SPRITES (CHARACTER MODELS) - 15.png":[491,53,2504,2194],"FAT NAP SPRITES (CHARACTER MODELS).png":[1097,23,1909,2196],"FAT NAP SPRITES (CHARACTER MODELS) - 24.png":[967,61,2034,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 14.png":[793,53,2209,2195]}};
+const INITIAL={"version":"0.4.239","base":{"idle":{"dx":0,"dy":0.75,"scale":1},"walk":{"dx":2.5,"dy":-4.5,"scale":1},"run":{"dx":2.35,"dy":-5.5,"scale":1},"jump":{"dx":3,"dy":-4,"scale":1},"crouch":{"dx":0,"dy":0,"scale":1},"crawl":{"dx":0,"dy":0,"scale":1},"head":{"dx":0,"dy":0,"scale":1},"fart":{"dx":0,"dy":-2.75,"scale":1},"light":{"dx":4,"dy":2,"scale":1},"baldBang":{"dx":2.75,"dy":-4.25,"scale":1},"powered":{"dx":0,"dy":0,"scale":1},"transform":{"dx":0,"dy":0,"scale":1},"ko":{"dx":0,"dy":0,"scale":1}},"frames":{"idle|FAT NAP SPRITES (CHARACTER MODELS).png":{"dx":0,"dy":-0.5,"w":0.9,"h":0.5,"r":-2},"walk|FAT NAP SPRITES (CHARACTER MODELS) - 4.png":{"dx":0.75,"dy":0,"w":0.85,"h":0.5,"r":-5},"walk|FAT NAP SPRITES (CHARACTER MODELS) - 5.png":{"dx":0.5,"dy":-0.25,"w":0.85,"h":0.5,"r":-7},"walk|FAT NAP SPRITES (CHARACTER MODELS) - 6.png":{"dx":0.25,"dy":-0.25,"w":0.85,"h":0.5,"r":-6},"walk|FAT NAP SPRITES (CHARACTER MODELS) - 7.png":{"dx":-0.25,"dy":-0.25,"w":0.85,"h":0.5,"r":-6},"run|FAT NAP SPRITES (CHARACTER MODELS) - 13.png":{"dx":0,"dy":0,"w":0.9,"h":0.5,"r":-5},"run|FAT NAP SPRITES (CHARACTER MODELS) - 14.png":{"dx":0.25,"dy":-0.25,"w":0.9,"h":0.5,"r":-5},"run|FAT NAP SPRITES (CHARACTER MODELS) - 15.png":{"dx":0.25,"dy":0,"w":0.9,"h":0.5,"r":-5},"run|FAT NAP SPRITES (CHARACTER MODELS) - 16.png":{"dx":0,"dy":-0.25,"w":0.9,"h":0.5,"r":-6},"head|FAT NAP SPRITES (CHARACTER MODELS) - 21.png":{"dx":2.75,"dy":-4,"w":0.7,"h":0.5,"r":-7},"head|FAT NAP SPRITES (CHARACTER MODELS) - 22.png":{"dx":1.5,"dy":0,"w":0.7,"h":0.5,"r":-4},"head|FAT NAP SPRITES (CHARACTER MODELS) - 23.png":{"dx":37.07,"dy":3.78,"w":0.5,"h":0.5,"r":29},"head|FAT NAP SPRITES (CHARACTER MODELS) - 24.png":{"dx":2.06,"dy":-3.96,"w":0.7,"h":0.5,"r":-4},"fart|FAT NAP SPRITES (CHARACTER MODELS) - 26.png":{"dx":-1.25,"dy":3,"w":0.8,"h":0.5,"r":12},"fart|FAT NAP SPRITES (CHARACTER MODELS) - 27.png":{"dx":2,"dy":2.25,"w":0.85,"h":0.5,"r":-4},"fart|FAT NAP SPRITES (CHARACTER MODELS) - 28.png":{"dx":1,"dy":4.5,"w":1.3,"h":0.5,"r":-26},"fart|FAT NAP SPRITES (CHARACTER MODELS) - 29.png":{"dx":2.67,"dy":4.02,"w":1.35,"h":0.5,"r":-40},"ko|FAT NAP SPRITES (CHARACTER MODELS).png":{"dx":0,"dy":0.25,"w":0.9,"h":0.5,"r":-3},"crouch|FAT NAP SPRITES (CHARACTER MODELS) - 31.png":{"dx":2.5,"dy":-4,"w":0.8,"h":0.5,"r":-3},"crouch|FAT NAP SPRITES (CHARACTER MODELS) - 32.png":{"dx":1.25,"dy":0.25,"w":0.8,"h":0.5,"r":-3},"crouch|FAT NAP SPRITES (CHARACTER MODELS) - 33.png":{"dx":4.25,"dy":-0.5,"w":0.85,"h":0.5,"r":-5},"jump|FAT NAP SPRITES (CHARACTER MODELS) - 35.png":{"dx":1.58,"dy":6.78,"w":0.85,"h":0.5,"r":-7},"jump|FAT NAP SPRITES (CHARACTER MODELS) - 36.png":{"dx":0,"dy":0,"w":0.8,"h":0.5,"r":-8},"jump|FAT NAP SPRITES (CHARACTER MODELS) - 37.png":{"dx":40.36,"dy":-4.63,"w":0.85,"h":0.5,"r":-6},"light|FAT NAP SPRITES (CHARACTER MODELS) - 40.png":{"dx":0.25,"dy":2,"w":0.75,"h":0.5,"r":0},"light|FAT NAP SPRITES (CHARACTER MODELS) - 41.png":{"dx":-4,"dy":2.5,"w":0.7,"h":0.5,"r":11},"light|FAT NAP SPRITES (CHARACTER MODELS) - 42.png":{"dx":2.5,"dy":-1,"w":0.85,"h":0.5,"r":-14},"crawl|crawl:0":{"dx":2.84,"dy":-0.73,"w":0.8,"h":0.5,"r":-2},"crawl|crawl:1":{"dx":4.84,"dy":4.47,"w":0.8,"h":0.5,"r":-2},"crawl|crawl:2":{"dx":2.8,"dy":-0.74,"w":0.8,"h":0.5,"r":-3},"crawl|crawl:3":{"dx":5.09,"dy":4.47,"w":0.75,"h":0.5,"r":-2},"baldBang|baldBang:0":{"dx":-0.09,"dy":-1.09,"w":0.9,"h":0.5,"r":-4},"baldBang|baldBang:1":{"dx":0.29,"dy":-0.24,"w":0.9,"h":0.5,"r":-2},"baldBang|baldBang:2":{"dx":1.31,"dy":8.72,"w":0.8,"h":0.5,"r":-5},"baldBang|baldBang:3":{"dx":2.86,"dy":8.04,"w":0.8,"h":0.5,"r":-4},"transform|transform:0":{"dx":-1.4,"dy":-4.72,"w":0.8,"h":0.5,"r":-3},"transform|transform:1":{"dx":-0.31,"dy":-0.59,"w":0.8,"h":0.5,"r":-6},"transform|transform:2":{"dx":-0.8,"dy":0.2,"w":1,"h":0.5,"r":8},"transform|transform:3":{"dx":-8.13,"dy":-12.04,"w":1,"h":0.5,"r":-3},"transform|transform:4":{"dx":-11.44,"dy":-12.78,"w":1.15,"h":0.5,"r":-2},"transform|transform:5":{"dx":-13.61,"dy":-11.63,"w":1.25,"h":0.5,"r":0},"powered|powerIdle:0":{"dx":8.63,"dy":-29.04,"w":0.65,"h":0.5,"r":-1},"powered|powerWalk:0":{"dx":22.28,"dy":-23.67,"w":0.55,"h":0.5,"r":0},"powered|powerWalk:1":{"dx":14.09,"dy":-24.53,"w":0.55,"h":0.5,"r":0},"powered|powerWalk:2":{"dx":10,"dy":-30.38,"w":0.55,"h":0.5,"r":0},"powered|powerWalk:3":{"dx":14.38,"dy":-24.49,"w":0.55,"h":0.5,"r":0},"powered|powerRun:0":{"dx":37.49,"dy":-13.5,"w":0.7,"h":0.5,"r":0},"powered|powerRun:1":{"dx":35.33,"dy":-13.69,"w":0.7,"h":0.5,"r":0},"powered|powerRun:2":{"dx":45.11,"dy":-9.04,"w":0.7,"h":0.5,"r":0},"powered|powerRun:3":{"dx":35.31,"dy":-13.63,"w":0.7,"h":0.5,"r":0},"powered|powerScream:0":{"dx":-19.68,"dy":-30.75,"w":0.85,"h":0.5,"r":0}},"bounds":{"FAT NAP SPRITES (CHARACTER MODELS) - 37.png":[761,55,2243,1349],"FAT NAP SPRITES (CHARACTER MODELS) - 32.png":[1060,474,1944,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 23.png":[533,460,2467,2196],"FAT NAP SPRITES (CHARACTER MODELS) - 29.png":[859,293,2138,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 33.png":[1019,946,1989,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 27.png":[1064,54,1931,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 6.png":[731,53,2266,2200],"FAT NAP SPRITES (CHARACTER MODELS) - 16.png":[789,54,2210,2194],"FAT NAP SPRITES (CHARACTER MODELS) - 41.png":[996,463,2017,2191],"FAT NAP SPRITES (CHARACTER MODELS) - 5.png":[1180,51,1826,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 26.png":[1074,54,1924,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 13.png":[639,51,2403,2196],"FAT NAP SPRITES (CHARACTER MODELS) - 40.png":[982,373,2024,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 28.png":[966,76,2194,2194],"FAT NAP SPRITES (CHARACTER MODELS) - 22.png":[741,220,2265,2193],"FAT NAP SPRITES (CHARACTER MODELS) - 35.png":[937,943,2071,2194],"FAT NAP SPRITES (CHARACTER MODELS) - 21.png":[974,53,2022,2192],"FAT NAP SPRITES (CHARACTER MODELS) - 31.png":[1124,54,1877,2198],"FAT NAP SPRITES (CHARACTER MODELS) - 36.png":[949,382,2050,1971],"FAT NAP SPRITES (CHARACTER MODELS) - 42.png":[1118,69,1879,2204],"FAT NAP SPRITES (CHARACTER MODELS) - 4.png":[734,51,2263,2196],"FAT NAP SPRITES (CHARACTER MODELS) - 7.png":[1170,51,1831,2198],"FAT NAP SPRITES (CHARACTER MODELS) - 15.png":[491,53,2504,2194],"FAT NAP SPRITES (CHARACTER MODELS).png":[1097,23,1909,2196],"FAT NAP SPRITES (CHARACTER MODELS) - 24.png":[967,61,2034,2197],"FAT NAP SPRITES (CHARACTER MODELS) - 14.png":[793,53,2209,2195]}};
 function detectFatNapMouthAnchor(im,bounds=null,sourceRect=null,kind='idle'){
  if(!im)return null;
  let perImage=fatNapMouthDetectCache.get(im);
@@ -1147,7 +1162,7 @@ async function syncGame(){
   if(!v||!b||!f||!bb)throw Error("Mouth data not found");
   const base={},frames={};
   for(const m of b[1].matchAll(/(\w+):\{dx:([-.\d]+),dy:([-.\d]+),scale:([-.\d]+)\}/g))base[m[1]]={dx:+m[2],dy:+m[3],scale:+m[4]};
-  for(const m of f[1].matchAll(/'([^']+)':\{dx:([-.\d]+),dy:([-.\d]+)(?:,w:([-.\d]+),h:([-.\d]+))?(?:,r:([-.\d]+))?\}/g))frames[m[1]]={dx:+m[2],dy:+m[3],w:m[4]?+m[4]:.85,h:m[5]?+m[5]:.5,r:m[6]?+m[6]:0};
+  for(const m of f[1].matchAll(/'([^']+)':\{dx:([-.\d]+),dy:([-.\d]+)(?:,w:([-.\d]+),h:([-.\d]+))?(?:,r:([-.\d]+))?(?:,noMouth:(true|false))?\}/g))frames[m[1]]={dx:+m[2],dy:+m[3],w:m[4]?+m[4]:.85,h:m[5]?+m[5]:.5,r:m[6]?+m[6]:0,noMouth:m[7]==="true"};
   st.base=base;st.original=frames;st.bounds=JSON.parse(bb[1]);st.version=v[1];
   el("status").textContent="✓ Live offsets loaded from game v"+st.version;
  }catch(e){el("status").textContent="Offline: using embedded settings (v"+st.version+"). "+e.message}
