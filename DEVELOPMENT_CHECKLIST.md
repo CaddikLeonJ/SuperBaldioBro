@@ -7,8 +7,10 @@
 - [x] Clout Power first-breath sound/effect timing
 - [x] Common feet anchor for standing and animating on squirrel bodies (needs on-device playtest)
 - [x] **Scream attack prototype** (v0.4.242): hold to use, sonic shockwaves, provisional synthesized sound, squirrel damage/knockback, Hemmergy drain
-- [ ] Playtest Scream against squirrels, including facing left/right and when standing on corpse platforms
-- [ ] Record/upload and integrate Fat Nap's **actual Scream sound** and develop dedicated animation, replacing temporary test synthesis
+- [x] **Mobile Scream controls** (v0.4.243): move and sprint freely, reverse normal/powered walking frames when backing up without turning around, aim using the button drag like Fart, scream during jumping/crouching/crawling/other attacks, enlarged mouth while screaming
+- [ ] Playtest Scream against squirrels, including joystick movement opposite to the aim, diagonal/up/down drag aim, crouching, jumping, powered mode and squirrel-body platforms
+- [ ] Record/upload and integrate Fat Nap's **actual Scream sound** to replace temporary test synthesis
+- [ ] **Dedicated standing-still Scream animation**, retaining walking, jumping, crouching and other existing action sprites when moving or performing those actions
 - [ ] Fine-tune Scream strength, distance, knockback, recovery and sound/FX after testing
 
 ## Later additions — not yet implemented
