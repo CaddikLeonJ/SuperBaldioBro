@@ -236,7 +236,7 @@ canvas{display:block;width:100%;height:clamp(330px,56vw,520px);cursor:crosshair;
 <div><div class="size-label"><label for="heightSlider" style="margin:0">↕ Mouth height</label><input class="num-input inline-number" id="heightInput" type="text" inputmode="decimal" aria-label="Mouth height multiplier" title="1 means 100%, 0.5 means 50%" value="1"></div><input id="heightSlider" type="range" min=".5" max="2.5" step=".05" value="1"></div>
 <div><div class="size-label"><label for="rotationSlider" style="margin:0">⟳ Tilt</label><span class="rotation-actions"><button id="rotMinus" aria-label="Rotate counterclockwise one degree">−</button><input class="num-input inline-number rotation-number" id="rotationInput" type="text" inputmode="decimal" aria-label="Mouth rotation angle in degrees" title="Type rotation in degrees, from -180 to 180" value="0"><button id="rotPlus" aria-label="Rotate clockwise one degree">+</button></span></div><input id="rotationSlider" type="range" min="-180" max="180" step="1" value="0"></div>
 </div></div>
-<div class="help" style="text-align:center">Or fine-tune by 0.25 game pixels</div>
+<div class="help" style="text-align:center">Or fine-tune by 0.01 game pixels per tap</div>
 <div class="dpad"><button id="up">↑ Up</button><button id="down">↓ Down</button><button id="left">← Left</button><button id="right">Right →</button><button id="reset">Reset</button></div>
 <div class="controls"><button class="cta" id="copyFrame">Copy this frame</button><button class="cta" id="copyAll">Copy all changes</button></div>
 <p class="help">Paste the copied coordinates into our chat. I'll update the real game on GitHub.</p>
@@ -1004,7 +1004,7 @@ el("heightSlider").oninput=e=>{const t=tune();commitEdit(t.dx,t.dy,t.w,+e.target
 el("rotationSlider").oninput=e=>{const t=tune();commitEdit(t.dx,t.dy,t.w,t.h,+e.target.value)};
 el("rotMinus").onclick=()=>{const t=tune();commitEdit(t.dx,t.dy,t.w,t.h,t.r-1)};
 el("rotPlus").onclick=()=>{const t=tune();commitEdit(t.dx,t.dy,t.w,t.h,t.r+1)};
-function nudge(dx,dy){const t=tune();commitEdit(t.dx+dx*.25,t.dy+dy*.25)}
+function nudge(dx,dy){const t=tune();commitEdit(t.dx+dx*.01,t.dy+dy*.01)}
 el("up").onclick=()=>nudge(0,-1);el("down").onclick=()=>nudge(0,1);el("left").onclick=()=>nudge(-1,0);el("right").onclick=()=>nudge(1,0);
 el("reset").onclick=()=>{const o=orig();commitEdit(o.dx,o.dy,o.w,o.h,o.r)};
 el("zoom").oninput=e=>{setPreviewZoom(e.target.value);draw()};
