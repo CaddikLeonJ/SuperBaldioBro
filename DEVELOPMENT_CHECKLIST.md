@@ -12,6 +12,8 @@
 - [ ] Record/upload and integrate Fat Nap's **actual Scream sound** to replace temporary test synthesis
 - [ ] **Dedicated standing-still Scream animation**, retaining walking, jumping, crouching and other existing action sprites when moving or performing those actions
 - [x] Scream cone grows from a small mouth emission to a wide distant wave; closer enemies take more damage (v0.4.244)
+- [x] **Animation + sonic FX corrections** (v0.4.245): dedicated crawl-frame mouth detection matched to Mouth Lab, normal/powered run sprites while screaming (including backwards runs), wave emission anchored to the actual calibrated speaking mouth, layered refractive sonic-pressure fronts
+- [ ] Playtest crawl mouth placement on each frame, grounded/jumping Scream alignment, normal and powered sprint animation, and new sonic-pressure effect in Scriptable
 - [ ] Fine-tune Scream strength, distance-based falloff, knockback, recovery and sound/FX after testing
 
 ## Later additions — not yet implemented
