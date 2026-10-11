@@ -638,20 +638,79 @@ function updateScream(dt){
  }
 }
 function drawScreamWaves(){
- if(!SCREAM.waves.length)return;
- x.save();x.lineCap='round';
+ if(!SCREAM.waves.length&&!SCREAM.active)return;
+ x.save();x.lineCap='round';x.lineJoin='round';
+ const powered=clout.powered||clout.detransforming,
+       scale=powered?cloutScale().y:1;
+ // The compressed air is born directly at the visibly rendered mouth.
+ // It opens only a few pixels here, before propagating into broad pressure arcs.
+ if(SCREAM.active){
+  const mouth=screamMouthOrigin(scale),pulse=.70+.30*Math.sin(S.t*47);
+  x.save();x.translate(mouth.x-S.cam,mouth.y);x.rotate(Math.atan2(SCREAM.aimY,SCREAM.aimX));
+  const plume=x.createLinearGradient(0,0,23*scale,0);
+  plume.addColorStop(0,'rgba(239,251,255,.32)');
+  plume.addColorStop(.45,'rgba(165,218,239,.12)');
+  plume.addColorStop(1,'rgba(157,215,243,0)');
+  x.globalAlpha=pulse;x.fillStyle=plume;x.beginPath();
+  x.moveTo(0,-2.5*scale);
+  x.quadraticCurveTo(9*scale,-5*scale,23*scale,-9*scale);
+  x.lineTo(23*scale,9*scale);
+  x.quadraticCurveTo(9*scale,5*scale,0,2.5*scale);
+  x.closePath();x.fill();
+  for(let i=0;i<2;i++){
+   x.globalAlpha=(.27-i*.09)*pulse;x.strokeStyle='#e7f8ff';x.lineWidth=1.2*scale;
+   x.beginPath();x.ellipse((3+i*7)*scale,0,(1.3+i*.8)*scale,(3.2+i*1.8)*scale,0,-Math.PI*.49,Math.PI*.49);x.stroke()
+  }
+  x.restore()
+ }
  for(const w of SCREAM.waves){
   const t=cl(w.age/w.life,0,1),dist=(3+(SCREAM_RANGE-3)*t)*w.scale,
         px=w.x-S.cam+w.aimX*dist,py=w.y+w.aimY*dist,
+        fade=Math.pow(1-cl((t-.74)/.26,0,1),1.4),
         spread=screamConeHalfWidth(t,w.scale),
-        fade=Math.pow(1-cl((t-.79)/.21,0,1),1.1),
-        alpha=(.76-.20*t)*fade,
-        waveDepth=(2+18*Math.pow(t,1.15))*w.scale;
-  x.save();x.translate(px,py);x.rotate(Math.atan2(w.aimY,w.aimX));
-  x.globalAlpha=alpha;x.strokeStyle='#d5efff';x.lineWidth=(2.2+2.5*t)*w.scale;
-  x.beginPath();x.ellipse(0,0,waveDepth,spread,0,-Math.PI*.49,Math.PI*.49);x.stroke();
-  x.globalAlpha=alpha*.38;x.strokeStyle='#83c9ff';x.lineWidth=(2.8+3.4*t)*w.scale;
-  x.beginPath();x.ellipse(-waveDepth*.38,0,waveDepth*.77,spread*.86,0,-Math.PI*.49,Math.PI*.49);x.stroke();
+        thickness=(2+17*Math.pow(t,1.12))*w.scale,
+        angle=Math.atan2(w.aimY,w.aimX);
+  if(fade<.008)continue;
+  // A newly born wave follows the present animation's mouth before moving
+  // away as a free-travelling pressure front.
+  if(SCREAM.active&&w.age<.018){
+   const mouth=screamMouthOrigin(scale);
+   w.x=mouth.x;w.y=mouth.y
+  }
+  const cx=w.x-S.cam+w.aimX*dist,cy=w.y+w.aimY*dist;
+  x.save();x.translate(cx,cy);x.rotate(angle);
+  // Each wavefront is a stack of refracted compression bands rather than a
+  // perfect cartoon circle. Tiny, animated irregularities suggest moving air.
+  for(let layer=2;layer>=0;layer--){
+   const back=layer*(3.6+7.5*t)*w.scale,
+         width=spread*(1-layer*.075),
+         depth=thickness*(1-layer*.08),
+         alpha=fade*(layer===0?.86:layer===1?.41:.22);
+   x.save();x.translate(-back,0);
+   x.beginPath();
+   for(let k=0;k<=22;k++){
+    const u=k/11-1,theta=u*Math.PI*.49,
+          edge=Math.sin(Math.PI*k/22),
+          distortion=Math.sin(u*20+w.age*30+layer*2.2)*edge*(.15+2.6*t)*w.scale,
+          ax=depth*Math.cos(theta)+distortion,ay=width*Math.sin(theta);
+    if(k===0)x.moveTo(ax,ay);else x.lineTo(ax,ay)
+   }
+   // Dark/light offsets mimic refractive boundaries and add sonic depth
+   // without covering the character or surrounding scenery.
+   x.globalAlpha=alpha*.20;x.strokeStyle='#226480';x.lineWidth=(6.5+7*t)*w.scale;x.stroke();
+   x.globalAlpha=alpha*.34;x.strokeStyle='#72bed8';x.lineWidth=(3.4+4.2*t)*w.scale;x.stroke();
+   x.globalAlpha=alpha;x.strokeStyle=layer===0?'#edfbff':'#c1e6f5';
+   x.lineWidth=(1.1+1.45*t)*w.scale;x.stroke();
+   x.restore()
+  }
+  // Gentle trailing air ripples give each pulse motion and frequency without
+  // sparkles, lightning, or a solid laser-beam appearance.
+  for(let side of [-1,1]){
+   x.globalAlpha=.13*fade;x.strokeStyle='#8ecbe0';x.lineWidth=Math.max(.7,1.35*w.scale);
+   x.beginPath();x.moveTo(-thickness*(2.5+t),side*spread*.30);
+   x.quadraticCurveTo(-thickness*(1.1+t),side*spread*.73,thickness*.13,side*spread*.93);
+   x.stroke()
+  }
   x.restore()
  }
  x.restore()
